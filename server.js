@@ -49,6 +49,17 @@ function listSessions() {
     let files = [];
     try { files = fs.readdirSync(path.join(ROOT, d.name), { withFileTypes: true }); } catch { continue; }
     for (const f of files) {
+      if (f.isDirectory()) {             // <session>/subagents/agent-xxx.jsonl : les sous-agents de cette session
+        const sub = path.join(ROOT, d.name, f.name, 'subagents');
+        let subs = [];
+        try { subs = fs.readdirSync(sub, { withFileTypes: true }); } catch { continue; }
+        for (const s of subs) {
+          if (!s.isFile() || !s.name.endsWith('.jsonl')) continue;
+          const full = path.join(sub, s.name);
+          try { const st = fs.statSync(full); out.push({ key: d.name + '/' + f.name + '/subagents/' + s.name, full, size: st.size, mtime: st.mtimeMs, meta: full.replace(/\.jsonl$/, '.meta.json') }); } catch { }
+        }
+        continue;
+      }
       if (!f.isFile() || !f.name.endsWith('.jsonl')) continue;
       const full = path.join(ROOT, d.name, f.name);
       try { const st = fs.statSync(full); out.push({ key: d.name + '/' + f.name, full, size: st.size, mtime: st.mtimeMs }); } catch { }
@@ -64,7 +75,8 @@ function readRange(file, start, end) {
 function pump(res, state) {   // un état de lecture par client connecté
   const now = Date.now();
   for (const s of listSessions()) {
-    let off = state.get(s.key), skipFirst = false;
+    let off = state.get(s.key), skipFirst = false, meta = null;
+    if (off === undefined && s.meta) { try { meta = JSON.parse(fs.readFileSync(s.meta, 'utf8')); } catch { } }
     if (off === undefined) {
       if (now - s.mtime > MAX_AGE) continue;
       off = Math.max(0, s.size - TAIL); skipFirst = off > 0;
@@ -77,7 +89,7 @@ function pump(res, state) {   // un état de lecture par client connecté
     const begin = skipFirst ? buf.indexOf(10) + 1 : 0;
     const text = begin <= end ? buf.subarray(begin, end).toString('utf8') : '';
     state.set(s.key, off + end + 1);
-    if (text) res.write('data: ' + JSON.stringify({ key: s.key, text }) + '\n\n');
+    if (text) res.write('data: ' + JSON.stringify(meta ? { key: s.key, text, meta } : { key: s.key, text }) + '\n\n');
   }
 }
 

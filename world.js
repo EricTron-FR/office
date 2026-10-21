@@ -1306,6 +1306,8 @@ function drawPerson(a, t) {
   if (mood === 'happy') by -= Math.round(Math.abs(Math.sin(t * 9)) * 3);
   if (seat === 'piano') x += Math.round(Math.sin(t * 2.2));
   if (a.act === 'guitar' && seat) by -= Math.floor(t * 2.5) % 2;
+  if (a.act === 'dance' && !seat && !walking) by -= Math.round(Math.abs(Math.sin(t * 6 + a.lookHash)) * 3);   // danse devant le juke-box
+  if (a.act === 'help' && !walking) by -= Math.floor(t * 1.5) % 2;
   const pal = mood === 'furious' ? a.palRed : a.pal, S = pal.S;
   const top = drawSprite(rows, x, by, pal, face === 'left');
   const head = top + (a.style === 2 ? 2 : 0), body = head + 12;   // haut de la tête / du t-shirt

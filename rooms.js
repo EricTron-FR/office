@@ -256,7 +256,7 @@ SPOTS.push(
 );
 furniture.push({ k: py(22) - 1, draw(t) {
   const x0 = px(-6) + 1, y0 = py(20) - 2, w = 46, h = 32;
-  const players = everyone().filter(a => a.act === 'billard' && !a.path.length && !a.heading).length;
+  const players = everyone().filter(a => a.act === 'billard' && !a.path.length && !a.heading).length + (catOnBilliard() ? 2 : 0);
   R(x0 + 1, y0 + h + 2, w, 3, SHADOW);
   panel(x0, y0, w, h, '#6e3a22'); R(x0 + 3, y0 + 3, w - 6, h - 9, '#2f8f5a'); R(x0 + 3, y0 + 3, w - 6, 1, '#3fa86c');
   R(x0, y0 + h - 6, w, 6, '#5a2e1a');
@@ -501,10 +501,10 @@ deco(1, 25, py(26), () => {                          // mange-debout + canettes
   R(cx - 4, by, 8, 1, SHADOW); R(cx, by - 8, 1, 8, '#3a3835'); panel(cx - 3, by - 10, 7, 2, '#d64fa0');
 }, false));
 SPOTS.push(
-  { cell: [-7, 18], face: 'up', label: 'Joue au flipper', w: 5 },
-  { cell: [-5, 18], face: 'up', label: 'Choisit un morceau au juke-box', w: 4 },
-  { cell: [3, 24], face: 'right', label: 'Tente la machine à pinces', w: 5 },
-  { cell: [4, 19], face: 'up', label: 'Joue aux fléchettes', w: 4 }
+  { cell: [-7, 18], face: 'up', label: 'Joue au flipper', w: 5, act: 'flipper' },
+  { cell: [-5, 18], face: 'up', label: 'Choisit un morceau au juke-box', w: 4, act: 'jukebox' },
+  { cell: [3, 24], face: 'right', label: 'Tente la machine à pinces', w: 5, act: 'claw' },
+  { cell: [4, 19], face: 'up', label: 'Joue aux fléchettes', w: 4, act: 'darts' }
 );
 HOOKS.post.push(t => {                               // fléchettes qui volent
   if (!near([4, 19])) return;
@@ -626,11 +626,163 @@ deco(33, 9, py(9) + 10, () => {                     // banc en bois (2 cases)
   leaves(cx + 1, by - 18, [[-8, -6, 6, 5, '#7f9463'], [2, -8, 6, 6, '#8ea472'], [-4, -12, 7, 5, '#93a978'], [-2, -3, 8, 4, '#7f9463']]);
 }));
 SPOTS.push(
-  { cell: [40, 5], face: 'right', label: 'Fait griller des saucisses', w: 4, ok: TERRACE_OK },
+  { cell: [40, 5], face: 'right', label: 'Fait griller des saucisses', w: 4, ok: TERRACE_OK, act: 'bbq' },
   { cell: [40, 3], face: 'right', label: 'Regarde Lyon à la longue-vue', w: 4, ok: TERRACE_OK }
 );
 IDLE_SEATS.push(seat([34, 9], { pos: [px(33) + 16, py(9) + 11], k: py(9) + 11.5, face: 'down', legs: 'sit', w: 4, ok: TERRACE_OK, label: 'Se pose sur le banc', stand: [34, 10] }));
 block(34, 9);
+
+/* ====================================================================
+   Interactions : on s'entraîne à plusieurs, on fête, on aide, on déploie
+   ==================================================================== */
+const EMOTES = new Map();                              // id -> { e, until }
+function emote(a, e, ms) { if (a) EMOTES.set(a.id, { e, until: performance.now() + (ms || 2500) }); }
+HOOKS.overlay.push(c => {
+  const now = performance.now();
+  EMOTES.forEach((v, id) => {
+    if (v.until < now) { EMOTES.delete(id); return; }
+    const a = everyone().find(x => x.id === id); if (!a || !a._anchor) return;
+    const [x, y] = toCss(a._anchor.x, a._anchor.y), k = Math.min(1, (v.until - now) / 400);
+    c.globalAlpha = k; c.font = '15px "Segoe UI Emoji", sans-serif'; c.textAlign = 'center';
+    c.fillText(v.e, x + 11, y - 8 - (1 - k) * 6); c.textAlign = 'left'; c.globalAlpha = 1;
+  });
+});
+const idleHere = a => !a.isOwner && !a.path.length && !a.heading && !WORK.has(a.state) && a.state !== 'asleep';
+const freeIdle = (except) => [...agents.values()].filter(a => a !== except && !a.path.length && !a.heading && !WORK.has(a.state) && a.state !== 'asleep'
+  && !['console', 'billard', 'babyfoot', 'arcade', 'bbq', 'bbqwait', 'dance', 'help', 'jukebox'].includes(a.act));
+const occupied = cell => everyone().some(o => (!o.path.length && cellOf(o)[0] === cell[0] && cellOf(o)[1] === cell[1]) || (o.heading && o.heading.cell && o.heading.cell[0] === cell[0] && o.heading.cell[1] === cell[1]));
+const closest = (list, a) => list.sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))[0];
+const playersOf = act => everyone().filter(a => a.act === act && !a.path.length && !a.heading);
+
+// 1. on rejoint les copains : jeux à deux, juke-box (danse), barbecue
+const DANCE_CELLS = [[-6, 18], [-4, 19], [-6, 19], [-3, 18]];
+let socialTick = 0;
+HOOKS.update.push((dt, now) => {
+  if (now < socialTick) return; socialTick = now + 4000;
+  const join = (host, cell, spot) => { const b = closest(freeIdle(host), host); if (b) { goTo(b, cell, Object.assign({ type: 'spot', cell }, spot)); return b; } };
+  ['billard', 'babyfoot', 'arcade'].forEach(act => {
+    const p = playersOf(act); if (p.length !== 1 || Math.random() > 0.45) return;
+    const sp = SPOTS.find(s => s.act === act && !occupied(s.cell)); if (sp) join(p[0], sp.cell, sp);
+  });
+  const cons = CONSOLE.map(zoneAgent).filter(Boolean);
+  if (cons.length === 1 && Math.random() < 0.45) { const s = CONSOLE.find(s => !seatTaken(s)), b = s && closest(freeIdle(cons[0]), cons[0]); if (b) goTo(b, s.cell, s); }
+  const dj = playersOf('jukebox')[0];
+  if (dj && Math.random() < 0.5) { const cell = DANCE_CELLS.find(c => !occupied(c)); if (cell) join(dj, cell, { face: 'down', act: 'dance', label: 'Danse sur le juke-box' }); }
+  const griller = playersOf('bbq')[0];
+  if (griller && !playersOf('bbqwait').length && Math.random() < 0.5 && !occupied([39, 5])) join(griller, [39, 5], { face: 'right', act: 'bbqwait', label: 'Attend sa saucisse' });
+  // les danseurs se dandinent de gauche à droite
+});
+HOOKS.update.push((dt, now, t) => { playersOf('dance').forEach(a => { a.face = Math.floor(t * 2 + a.lookHash) % 2 ? 'left' : 'right'; }); });
+
+// 2. fins de partie et petites victoires
+let resultTick = 0;
+HOOKS.update.push((dt, now) => {
+  if (now < resultTick) return; resultTick = now + 11000;
+  [['billard', '🏆'], ['babyfoot', '🏆'], ['arcade', '🏆']].forEach(([act, win]) => {
+    const p = playersOf(act); if (p.length < 2) return;
+    const w = pick(p); p.forEach(a => emote(a, a === w ? win : pick(['😤', '😅', '🙃']), 2800));
+  });
+  const cons = CONSOLE.map(zoneAgent).filter(Boolean);
+  if (cons.length === 2) { const w = pick(cons); cons.forEach(a => emote(a, a === w ? '🏆' : 'GG', 2800)); }
+  else if (cons.length === 1) emote(cons[0], pick(['🎮', '⭐', '😤']), 2200);
+  playersOf('darts').forEach(a => emote(a, pick(['🎯', '🎯', '😬']), 2200));
+  playersOf('flipper').forEach(a => emote(a, pick(['⭐', '⭐', '💥']), 2200));
+  playersOf('claw').forEach(a => emote(a, Math.random() < 0.25 ? '🧸' : '😩', 2400));
+  const g1 = playersOf('bbq')[0], g2 = playersOf('bbqwait')[0];
+  if (g1 && g2) { emote(g1, '🌭', 2600); emote(g2, '😋', 2600); }
+  playersOf('dance').forEach(a => emote(a, pick(['🎶', '🕺', '💃']), 2000));
+});
+
+// 3. bibliothèque : on chuchote
+let hushTick = 0;
+HOOKS.update.push((dt, now) => {
+  if (now < hushTick) return; hushTick = now + 6000;
+  const talkers = everyone().filter(a => a.chatWith && a.x >= 28 && a.y >= 17);
+  if (!talkers.length) return;
+  const reader = everyone().find(a => a.mode === 'sit' && a.x >= 28 && a.y >= 17);
+  if (reader) emote(reader, '🤫', 2500); talkers.forEach(a => emote(a, '😶', 1800));
+});
+
+// 4. tests qui échouent : panique, un collègue vient aider, puis on fête quand ça repasse
+let helpTick = 0;
+HOOKS.update.push((dt, now) => {
+  if (now < helpTick) return; helpTick = now + 3000;
+  ZONE_SEATS.tests.forEach(s => {
+    const a = zoneAgent(s); if (!a) return;
+    const failing = errRecent(a);
+    if (failing && !a._failing) { emote(a, '😱', 3000); a._failing = true; }
+    if (!failing && a._failing) { emote(a, '🎉', 3500); a._failing = false; const h = everyone().find(o => o.act === 'help' && o.helpFor === a.id); if (h) emote(h, '🙌', 3000); }
+    if (failing && !everyone().some(o => o.helpFor === a.id && (o.act === 'help' || (o.heading && o.heading.act === 'help'))) && Math.random() < 0.5) {
+      const cell = [s.cell[0], 20], b = !occupied(cell) && closest(freeIdle(a), a);
+      if (b) { goTo(b, cell, { type: 'spot', cell, face: 'up', act: 'help', label: 'Aide ' + a.name + ' à débugger' }); b.helpFor = a.id; }
+    }
+  });
+});
+
+// 5. déploiement : une petite fusée décolle de la console
+const ROCKETS = [];
+let rocketTick = 0;
+HOOKS.update.push((dt, now) => {
+  if (now < rocketTick) return; rocketTick = now + 1000;
+  ZONE_SEATS.server.forEach(s => {
+    const a = zoneAgent(s); if (!a) return;
+    const deploying = /\b(git push|deploy|déploie|release|publish)\b/i.test(a.bubble || '');
+    if (deploying && a._lastRocket !== a.bubble) { a._lastRocket = a.bubble; ROCKETS.push({ x: px(s.cell[0]) + 8, y: py(17) - 18, t0: now }); news('🚀', a.name + ' déploie !'); emote(a, '🚀', 2500); }
+    if (!deploying) a._lastRocket = null;
+  });
+});
+HOOKS.post.push(() => {
+  const now = performance.now();
+  for (let i = ROCKETS.length - 1; i >= 0; i--) {
+    const r = ROCKETS[i], p = (now - r.t0) / 2200;
+    if (p > 1) { ROCKETS.splice(i, 1); continue; }
+    const y = r.y - Math.round(p * p * 70);
+    R(r.x - 1, y, 3, 6, '#e9e4da'); R(r.x, y - 2, 1, 2, '#d64545'); R(r.x - 2, y + 4, 1, 2, '#d64545'); R(r.x + 2, y + 4, 1, 2, '#d64545');
+    R(r.x - 1, y + 6, 3, 2 + Math.floor(now / 60) % 2, AMBER); R(r.x, y + 8, 1, 2, '#ff6b3e');
+    g.globalAlpha = 0.5 * (1 - p); R(r.x - 2, y + 10, 5, 3, '#d8d2c6'); g.globalAlpha = 1;
+  }
+});
+
+// 6. Eric vient voir sur place quand ça chauffe
+let ericPatrol = 0;
+HOOKS.update.push((dt, now) => {
+  if (!owner || now < ericPatrol || !(owner.seat && owner.seat.ceo)) return;
+  const testsBad = ZONE_SEATS.tests.some(s => errRecent(zoneAgent(s))), serverBad = ZONE_SEATS.server.some(s => errRecent(zoneAgent(s)));
+  if (!testsBad && !serverBad) return;
+  ericPatrol = now + 180000;
+  const cell = testsBad ? [11, 20] : [21, 19];
+  owner.state = 'idle';
+  goTo(owner, cell, { type: 'spot', cell, face: 'up', label: testsBad ? 'Vient voir les tests qui plantent' : 'Vient voir l\'alarme du serveur' });
+  news('👀', OWNER + ' descend voir ' + (testsBad ? 'les tests' : 'la salle serveur'));
+});
+
+// 7. les chats sautent sur le billard
+const BILLIARD_CAT = { cell: [-5, 20], z: 12, x: -4.5, y: 21.0, k: py(22) - 0.5, mode: 'sit', stay: 9000, w: 3, label: 'Joue avec les boules de billard' };
+CAT_SPOTS.push(BILLIARD_CAT);
+const catOnBilliard = () => cats.some(c => c.spot === BILLIARD_CAT && !c.path.length);
+
+/* ---------- sous-agents (stagiaires) : badge sur le torse, et départ par la porte quand ils ont fini ---------- */
+HOOKS.update.push(() => {
+  agents.forEach(a => {
+    if (!a.leaving) return;
+    if (!a._leaving) {
+      a._leaving = true; a.zoneSeat = null;
+      if (typeof emote === 'function') emote(a, '👋', 2500);
+      goTo(a, DOOR, { type: 'spot', cell: DOOR, face: 'up', label: 'A fini sa mission, s\'en va' });
+      if (typeof pushNews === 'function') pushNews('✅', a.name + ' a fini sa mission');
+    } else if (!a.path.length && !a.heading) {
+      removeAgent(a);
+      if (typeof sessions !== 'undefined' && sessions.get(a.id)) sessions.get(a.id).done = true;
+    }
+  });
+});
+HOOKS.post.push(() => {
+  agents.forEach(a => {
+    if (!a.isSub || !a._anchor) return;
+    const x = a._anchor.x, y = a._anchor.y + (a.id === selectedId ? 6 : 1);
+    R(x - 1, y + 12, 1, 3, CLAY); R(x + 1, y + 12, 1, 3, CLAY); panel(x - 2, y + 15, 4, 3, CREAM, OUT); R(x - 1, y + 16, 2, 1, BLUE);
+  });
+});
 
 /* ---------- lumières des nouvelles salles (utilisé par features.js la nuit) ---------- */
 function roomLights(t, add) {

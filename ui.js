@@ -79,7 +79,7 @@ function trackChanges() {
     if (e > tr.errorAt) { tr.errorAt = e; pushNews('❌', a.name + ' : échec' + (a.bubble ? ' sur « ' + a.bubble.replace(/^Attend \? /, '').replace(/\s*\(échec\)$/, '') + ' »' : ''), 'error'); sound('error'); }
     const lc = a.logCount || 0;
     if (lc > tr.logCount) {
-      a.log.slice(-(lc - tr.logCount)).forEach(l => { if (l.text.startsWith('🧑')) pushNews('💬', 'Tu as écrit à ' + a.name); });
+      a.log.slice(-(lc - tr.logCount)).forEach(l => { if (l.text.startsWith('🧑') && !a.isSub) pushNews('💬', 'Tu as écrit à ' + a.name); });
       tr.logCount = lc;
     }
   });
