@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eric Office</title>
+<style>
+:root{
+  --bg:#1f1e1d; --panel:#2a2927; --line:#3d3b37; --cream:#faf9f5;
+  --clay:#d97757; --clay2:#c6613f; --mute:#a09b90;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--cream);font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:600;display:flex;align-items:center;gap:8px}
+header h1 i{color:var(--clay);font-style:normal;font-size:20px}
+.sp{flex:1}
+.pill{font-size:12px;color:var(--mute);border:1px solid var(--line);padding:3px 10px;border-radius:99px}
+button{background:var(--clay);color:#fff;border:0;border-radius:8px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+button:hover{background:var(--clay2)}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--cream)}
+button.ghost:hover{background:var(--panel)}
+main{flex:1;display:flex;min-height:0}
+.stage{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+#view{flex:1;min-height:0;padding:12px;display:flex;align-items:center;justify-content:center}
+canvas#c{display:block;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:10px}
+/* barre d'outils flottante */
+#tools{position:absolute;top:18px;left:18px;display:flex;gap:6px;flex-wrap:wrap;z-index:2;max-width:calc(100% - 36px)}
+#tools button{background:rgba(31,30,29,.8);border:1px solid #4a4743;padding:5px 9px;font-size:12px;border-radius:8px;backdrop-filter:blur(4px)}
+#tools button:hover{background:#3a3734}
+#tools button.on{background:var(--clay);border-color:var(--clay)}
+#tools .sep{width:1px;background:#4a4743;margin:2px 2px}
+.pop{position:absolute;top:56px;left:18px;background:rgba(42,41,39,.97);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:3;font-size:13px;min-width:250px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.pop[hidden]{display:none}
+.pop h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mute)}
+.lg{display:flex;align-items:center;gap:8px;margin:5px 0}
+.lg i{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.lg span.e{width:16px;text-align:center}
+.pop label{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.pop input[type=text]{background:#1f1e1d;border:1px solid var(--line);color:var(--cream);border-radius:6px;padding:4px 8px;font:inherit;width:120px}
+.seg{display:flex;gap:4px;margin:4px 0 8px}
+.seg button{padding:4px 10px;font-size:12px;background:#1f1e1d;border:1px solid var(--line);color:var(--cream)}
+.seg button.on{background:var(--clay);border-color:var(--clay)}
+/* fil d'actu */
+#ticker{height:34px;flex:none;display:flex;align-items:center;gap:22px;padding:0 16px;border-top:1px solid var(--line);overflow:hidden;white-space:nowrap;font-size:12.5px;color:#cfc9bb;background:#242220}
+#ticker .ev{display:inline-flex;gap:6px;align-items:center;animation:slidein .5s ease-out;flex:none}
+#ticker .ev:not(:first-child){opacity:.65}
+#ticker time{color:var(--mute);font-variant-numeric:tabular-nums}
+#ticker .waiting{color:#f0c46a} #ticker .error{color:#f08a7a} #ticker .done{color:#b5d39a} #ticker .party{color:#f4a7c0}
+#ticker .empty{color:var(--mute)}
+@keyframes slidein{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+/* panneau latéral : fiches agents */
+aside{width:400px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--mute);margin:14px 16px 6px;font-weight:600;display:flex;justify-content:space-between}
+#list{overflow:auto;max-height:46%;padding-bottom:4px;flex:none}
+body.chatting #list{max-height:28%}
+body.chatting #detail, body.chatting #detailTitle{display:none}
+.card{display:flex;gap:10px;align-items:center;padding:7px 10px;margin:4px 8px;border-radius:10px;cursor:pointer;background:#2f2d2a;border:1px solid transparent}
+.card:hover{background:#34312d}
+.card.sel{border-color:var(--clay);background:#38342f}
+.card canvas{width:24px;height:40px;image-rendering:pixelated;flex:none}
+.card .meta{min-width:0;flex:1}
+.card b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card small{color:var(--mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{font-size:10.5px;padding:1px 7px;border-radius:99px;color:#1f1e1d;font-weight:700;white-space:nowrap}
+.dur{font-size:11px;color:var(--mute);font-variant-numeric:tabular-nums;margin-left:4px}
+#detail{padding:0 16px 16px;overflow:auto;flex:1}
+#detail .cwd{color:var(--mute);font-size:12px;word-break:break-all;margin-bottom:8px}
+#detail .acts{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+#detail .acts button{padding:4px 9px;font-size:12px}
+#detail .fame{font-size:12px;color:#e8c27a;margin:4px 0 8px}
+#log{font:12px/1.5 ui-monospace,Consolas,monospace;color:#cfc9bb}
+#log div{padding:2px 0;border-bottom:1px dashed #36332f;word-break:break-word}
+#log time{color:var(--mute);margin-right:6px}
+.empty{color:var(--mute);font-size:13px}
+/* fenêtre de discussion façon Claude Code */
+#chat{flex:1;min-height:0;background:#262523;border-top:1px solid var(--line);display:flex;flex-direction:column}
+.ch-acts{display:flex;gap:4px;flex-wrap:wrap;padding:6px 14px 8px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--mute);align-items:center}
+.ch-acts button{padding:2px 7px;font-size:12px}
+.ch-acts .sub{flex-basis:100%;margin-top:2px}
+#chat[hidden]{display:none}
+.ch-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ch-head canvas{width:20px;height:30px;image-rendering:pixelated}
+.ch-who{flex:1;min-width:0}.ch-who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-who small{display:block;color:var(--mute);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-head button{padding:4px 9px;font-size:12px}
+.ch-log{flex:1;overflow:auto;padding:14px 16px 6px;font-size:14px;line-height:1.55}
+.ch-user{margin:12px 0 12px auto;max-width:85%;width:fit-content;background:#3a3734;border-radius:14px 14px 4px 14px;padding:8px 12px}
+.ch-user.pending{opacity:.6}.ch-user small{display:block;color:var(--mute);font-size:10.5px;text-align:right}
+.ch-ai{margin:10px 0;color:#ece6da}
+.ch-p{white-space:pre-wrap;word-break:break-word}
+.ch-p code,.ch-code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.ch-p code{background:#1f1e1d;border-radius:4px;padding:1px 5px;color:#f0b49b}
+.ch-code{background:#1b1a19;border:1px solid #33312e;border-radius:8px;padding:8px 10px;margin:6px 0;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow:auto;color:#ddd6c8}
+.ch-diff .del{color:#f0918a;background:rgba(224,74,59,.12);display:inline-block;width:100%}.ch-diff .add{color:#a8d58f;background:rgba(120,140,93,.18);display:inline-block;width:100%}
+.ch-out.err{border-color:#7a3a30;color:#f0b0a6}
+.ch-outl{font-size:11px;color:var(--mute);margin-top:6px}
+.ch-tool{margin:3px 0;font-size:13px}
+.ch-trow{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 6px;border-radius:6px;min-width:0}
+.ch-trow:hover{background:#2f2d2a}
+.ch-trow i{width:8px;height:8px;border-radius:50%;flex:none;background:#8a857b}
+.ch-tool.run .ch-trow i{background:var(--clay);animation:blink 1s infinite}.ch-tool.ok .ch-trow i{background:#8fb06f}.ch-tool.err .ch-trow i{background:#e04a3b}
+.ch-trow b{font-weight:600;flex:none}.ch-trow span{color:var(--mute);font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.ch-trow em{color:var(--mute);font-style:normal;flex:none}
+.ch-tdet{margin:2px 0 8px 22px}
+.ch-think{color:var(--clay);margin:10px 0;font-size:13.5px}.ch-think i{font-style:normal;display:inline-block;width:16px}
+@keyframes blink{50%{opacity:.35}}
+.ch-perms{padding:0 14px}.ch-perms:empty{display:none}
+.ch-foot{display:flex;gap:8px;align-items:flex-end;padding:10px 14px 4px;border-top:1px solid var(--line)}
+.ch-foot textarea{flex:1;resize:none;min-height:42px;max-height:160px;background:#1f1e1d;border:1px solid var(--line);color:var(--cream);border-radius:12px;padding:10px 12px;font:inherit;font-size:14px}
+.ch-foot textarea:focus{outline:none;border-color:var(--clay)}
+.ch-send{width:42px;height:42px;border-radius:12px;font-size:16px;padding:0}
+.ch-hint{font-size:11px;color:var(--mute);padding:2px 16px 10px}
+/* demandes d'autorisation + discussion */
+#perms:empty{display:none}
+#perms{padding:10px 8px 2px}
+.perm{background:#3a3020;border:1px solid #e8b04a;border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:12.5px}
+.perm b{color:#f0c46a}
+.perm code{display:block;margin:5px 0 7px;padding:5px 7px;background:#1f1e1d;border-radius:6px;font:11.5px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;max-height:110px;overflow:auto;color:#e6e0d4}
+.perm .row{display:flex;gap:6px}
+.perm .row button{padding:4px 10px;font-size:12px}
+.perm .row .no{background:transparent;border:1px solid #6b5a3a;color:var(--cream)}
+.chat{display:flex;gap:6px;margin:8px 0 10px}
+.chat textarea{flex:1;min-height:38px;max-height:140px;resize:vertical;background:#1f1e1d;border:1px solid var(--line);color:var(--cream);border-radius:8px;padding:6px 8px;font:inherit;font-size:13px}
+.chat textarea:focus{outline:none;border-color:var(--clay)}
+.runinfo{font-size:11.5px;color:var(--mute);margin:-2px 0 6px}
+#newagent label{display:block;margin:8px 0 3px;font-size:12px;color:var(--mute)}
+#newagent input[type=text],#newagent textarea,#newagent select{width:100%;background:#1f1e1d;border:1px solid var(--line);color:var(--cream);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
+#newagent textarea{min-height:80px;resize:vertical}
+#newagent{min-width:340px;left:auto;right:18px}
+/* mode kiosque (télé, second écran) */
+body.kiosk header, body.kiosk aside{display:none}
+@media (max-width:820px){main{flex-direction:column}aside{width:auto;border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1><i>✻</i> Eric Office</h1>
+  <span class="pill" id="mode">Mode démo</span>
+  <span class="pill" id="weather" hidden></span>
+  <span class="sp"></span>
+  <button class="ghost" id="btnDemo" hidden>Mode démo</button>
+  <button class="ghost" id="btnReconnect" hidden>Reconnecter</button>
+  <button class="ghost" id="btnNew" hidden>＋ Nouvel agent</button>
+  <button id="btnConnect">Connecter mes sessions Claude Code</button>
+</header>
+<main>
+  <div class="stage">
+    <div id="tools"></div>
+    <div class="pop" id="legend" hidden></div>
+    <div class="pop" id="settings" hidden></div>
+    <div class="pop" id="newagent" hidden></div>
+    <div id="view"><canvas id="c"></canvas></div>
+    <div id="ticker"><span class="empty">Le fil d'actu s'affichera ici.</span></div>
+  </div>
+  <aside>
+    <div id="perms"></div>
+    <h2><span>Agents</span><span id="count"></span></h2>
+    <div id="list"></div>
+    <h2 id="detailTitle">Détails</h2>
+    <div id="detail"><div class="empty">Clique sur un perso pour voir ce qu'il fait.</div></div>
+  </aside>
+</main>
+
+<script src="world.js"></script>
+<script src="features.js"></script>
+<script src="ui.js"></script>
+<script>
+'use strict';
+/* ====================================================================
+   5. Mode démo (agents simulés)
+   ==================================================================== */
+const DEMO_STEPS = [
+  ['working', 'Édite App.tsx'], ['working', '$ npm test'], ['reading', 'Lit router.ts'], ['reading', 'Cherche "useAuth"'],
+  ['working', 'Écrit schema.sql'], ['thinking', 'Réflexion…'], ['reading', 'Web: docs React'], ['waiting', 'Attend ta validation'],
+  ['error', '$ npm test (échec)'], ['rush', 'Édite 12 fichiers'], ['thinkLong', 'Réflexion…'], ['done', ''],
+  ['idle', ''], ['idle', ''], ['idle', '']
+];
+let demoTimer = null;
+function startDemo() {
+  stopAll();
+  setMode('Mode démo');
+  ['front-app', 'api-refactor', 'docs', 'tests', 'review-bot', 'infra'].forEach((n, i) => {
+    const a = makeAgent('demo-' + n, n); a.cwd = 'C:\\demo\\' + n;
+    a.baseTitle = n; a.title = a.name = NICKS[a.lookKey] || n;
+    a.demoNext = performance.now() + i * 900; agents.set(a.id, a);
+  });
+  demoTimer = setInterval(() => {
+    const now = performance.now();
+    agents.forEach(a => {
+      if (now < a.demoNext) return;
+      let [st, txt] = DEMO_STEPS[Math.floor(Math.random() * DEMO_STEPS.length)];
+      const m = a.m; m.intensity = 0;
+      if (st === 'error') { st = 'working'; m.errorAt = Date.now(); m.errors3m = Math.random() < 0.4 ? 3 : 1; }
+      else if (st === 'rush') { st = 'working'; m.intensity = 10; }
+      else if (st === 'thinkLong') { st = 'thinking'; m.thinkSince = Date.now() - 25000 - Math.random() * 30000; }
+      else if (st === 'thinking') m.thinkSince = Date.now();
+      else if (st === 'done') { st = 'idle'; m.doneAt = Date.now(); txt = ''; }
+      a.state = st; a.bubble = txt; addLog(a, txt || 'Fait une pause');
+      a.demoNext = now + (st === 'idle' ? 15000 + Math.random() * 20000 : 5000 + Math.random() * 8000);
+    });
+  }, 500);
+}
+
+/* ====================================================================
+   6. Vraies sessions Claude Code (dossier .claude/projects, fichiers .jsonl)
+   ==================================================================== */
+const MAX_AGE = 2 * 3600 * 1000;       // on ignore les sessions inactives depuis > 2 h
+const sessions = new Map();            // chemin -> état de lecture
+let rootHandle = null, pollTimer = null, polling = false;
+
+function baseName(p) { return String(p || '').split(/[\\/]/).filter(Boolean).pop() || ''; }
+function toolInfo(name, input) {
+  input = input || {};
+  const file = baseName(input.file_path || input.path || input.notebook_path);
+  const clip = s => String(s || '').replace(/\s+/g, ' ').trim();
+  switch (name) {
+    case 'Edit': case 'MultiEdit': return ['working', 'Édite ' + file];
+    case 'Write': return ['working', 'Écrit ' + file];
+    case 'NotebookEdit': return ['working', 'Édite ' + file];
+    case 'Bash': case 'PowerShell': return ['working', '$ ' + clip(input.command)];
+    case 'Read': return ['reading', 'Lit ' + file];
+    case 'Grep': return ['reading', 'Cherche "' + clip(input.pattern) + '"'];
+    case 'Glob': return ['reading', 'Liste ' + clip(input.pattern)];
+    case 'WebSearch': return ['reading', 'Web: ' + clip(input.query)];
+    case 'WebFetch': return ['reading', 'Web: ' + clip(input.url)];
+    case 'Agent': case 'Task': return ['working', 'Sous-agent: ' + clip(input.description)];
+    case 'TodoWrite': case 'TaskCreate': case 'TaskUpdate': return ['thinking', 'Met à jour sa todo'];
+    case 'AskUserQuestion': return ['waiting', 'Te pose une question'];
+    default: return ['working', name.replace(/^mcp__.*__/, '').replace(/_/g, ' ')];
+  }
+}
+function newSession(key, project, file) {
+  return { key, project, file, offset: 0, skipFirst: false, pending: new Map(), busy: false, last: 0, title: '', cwd: '',
+    chat: [], toolIdx: new Map(), chatVer: 0 };   // conversation complète, pour la fenêtre de discussion
+}
+// texte d'un résultat d'outil (chaîne ou blocs)
+function resultText(c) {
+  if (typeof c === 'string') return c;
+  if (Array.isArray(c)) return c.map(b => b.type === 'text' ? b.text : b.type === 'image' ? '[image]' : '').join('\n');
+  return '';
+}
+function chatPush(s, item) {
+  s.chat.push(item); s.chatVer++;
+  if (s.chat.length > 400) { const old = s.chat.splice(0, s.chat.length - 400); old.forEach(i => { if (i.k === 'tool') s.toolIdx.delete(i.id); }); }
+}
+const LONG_TOOLS = new Set(['Bash', 'PowerShell', 'Agent', 'Task', 'WebFetch', 'WebSearch']);
+
+// applique une ligne JSONL à la session
+function ingest(s, e, a) {
+  const ts = e.timestamp ? Date.parse(e.timestamp) : 0;
+  if (ts && ts > s.last) s.last = ts;
+  if (e.cwd && !s.cwd) s.cwd = e.cwd;
+  if (e.type === 'custom-title' && e.customTitle) s.title = e.customTitle;
+  else if (e.type === 'agent-name' && e.agentName && !s.title) s.title = e.agentName;
+  const msg = e.message;
+  if (e.type === 'assistant' && msg && Array.isArray(msg.content)) {
+    s.busy = true;
+    for (const b of msg.content) {
+      if (b.type === 'tool_use') {
+        s.pending.set(b.id, { name: b.name, input: b.input, t: ts || Date.now() });
+        (s.toolTimes = s.toolTimes || []).push(ts || Date.now());
+        a.logs.push(toolInfo(b.name, b.input)[1]);
+        const item = { k: 'tool', id: b.id, name: b.name, input: b.input || {}, st: 'run', t: ts };
+        s.toolIdx.set(b.id, item); chatPush(s, item);
+      } else if (b.type === 'text' && b.text && b.text.trim()) {
+        a.logs.push('💬 ' + b.text.trim().replace(/\s+/g, ' ').slice(0, 140));
+        chatPush(s, { k: 'text', text: b.text, t: ts });
+      }
+    }
+    if (msg.stop_reason === 'end_turn') { s.busy = false; s.doneAt = ts || Date.now(); }
+  } else if (e.type === 'user' && msg) {
+    const c = msg.content;
+    if (Array.isArray(c) && c.some(b => b.type === 'tool_result')) {
+      c.forEach(b => {
+        if (b.type !== 'tool_result') return;
+        s.pending.delete(b.tool_use_id);
+        if (b.is_error) { s.lastError = ts || Date.now(); (s.errTimes = s.errTimes || []).push(s.lastError); }
+        const tool = s.toolIdx.get(b.tool_use_id);
+        if (tool) { tool.st = b.is_error ? 'err' : 'ok'; tool.out = resultText(b.content).slice(0, 4000); s.chatVer++; }
+      });
+    } else if (!e.isMeta) {
+      const text = typeof c === 'string' ? c : (Array.isArray(c) ? c.filter(b => b.type === 'text').map(b => b.text).join(' ') : '');
+      if (text && !text.startsWith('<')) {
+        a.logs.push('🧑 ' + text.trim().replace(/\s+/g, ' ').slice(0, 140)); s.busy = true; s.pending.clear();
+        chatPush(s, { k: 'user', text, t: ts });
+      }
+    }
+  } else if (e.type === 'system' && (e.subtype === 'stop_hook_summary' || e.subtype === 'turn_duration')) {
+    if (s.busy) s.doneAt = ts || Date.now();
+    s.busy = false; s.pending.clear();
+  }
+}
+function computeState(s, now) {
+  const age = now - s.last;
+  const pend = [...s.pending.values()];
+  if (pend.length) {
+    const p = pend[pend.length - 1], [st, txt] = toolInfo(p.name, p.input), wait = now - p.t;
+    if (st === 'waiting') return ['waiting', txt];
+    if (wait > (LONG_TOOLS.has(p.name) ? 60000 : 8000) && age < 3600000) return ['waiting', 'Attend ? ' + txt];
+    return [st, txt];
+  }
+  if (s.busy && age < 120000) return ['thinking', 'Réflexion…'];
+  if (age > 30 * 60000) return ['asleep', ''];
+  return ['idle', ''];
+}
+
+async function pollOnce() {
+  if (!rootHandle || polling) return; polling = true;
+  try {
+    const now = Date.now();
+    for await (const [pname, ph] of rootHandle.entries()) {
+      if (ph.kind !== 'directory') continue;
+      for await (const [fname, fh] of ph.entries()) {
+        if (fh.kind !== 'file' || !fname.endsWith('.jsonl')) continue;
+        const key = pname + '/' + fname;
+        let file;
+        try { file = await fh.getFile(); } catch { continue; }
+        let s = sessions.get(key);
+        if (!s) {
+          if (now - file.lastModified > MAX_AGE) continue;
+          s = newSession(key, pname, fname); s.offset = Math.max(0, file.size - 400000); s.skipFirst = s.offset > 0;
+          sessions.set(key, s);
+        }
+        if (file.size < s.offset) s.offset = 0;
+        if (file.size > s.offset) {
+          const bytes = new Uint8Array(await file.slice(s.offset, file.size).arrayBuffer());
+          const end = bytes.lastIndexOf(10);
+          if (end >= 0) {
+            let begin = 0;
+            if (s.skipFirst) { begin = bytes.indexOf(10) + 1; s.skipFirst = false; }
+            const text = new TextDecoder().decode(bytes.subarray(begin, end));
+            s.offset += end + 1;
+            applyText(s, text);
+          }
+        }
+      }
+    }
+    syncAgents(now);
+  } catch (err) { console.error(err); setMode('Erreur de lecture : ' + err.message); }
+  polling = false;
+}
+function applyText(s, text) {
+  const a = { logs: [] };
+  for (const line of text.split('\n')) {
+    if (!line) continue;
+    let e; try { e = JSON.parse(line); } catch { continue; }
+    ingest(s, e, a);
+  }
+  s.newLogs = (s.newLogs || []).concat(a.logs);
+}
+function syncAgents(now) {
+  sessions.forEach((s, key) => {
+    if (now - s.last > MAX_AGE && !s.pending.size) { const a = agents.get(key); if (a) removeAgent(a); return; }
+    if (!s.last) return;
+    const hid = HIDDEN[key];                          // retiré du bureau, sauf nouvelle activité depuis
+    if (hid) { if (s.last <= hid.at) { const x = agents.get(key); if (x) removeAgent(x); return; } delete HIDDEN[key]; saveHidden(); }
+    let a = agents.get(key);
+    if (!a) { a = makeAgent(key, '', false, s.project); agents.set(key, a); }
+    const title = s.title || baseName(s.cwd) || key.slice(-8);
+    a.baseTitle = title; a.title = a.name = NICKS[a.lookKey] || title; a.cwd = s.cwd;
+    let [st, txt] = computeState(s, now);
+    a.sessionId = key.split('/').pop().replace(/\.jsonl$/, '');
+    const pp = permFor(a.sessionId);                 // une demande d'autorisation en attente l'emporte
+    if (pp) { st = 'waiting'; txt = 'Demande : ' + permLabel(pp); }
+    a.state = st; a.bubble = txt;
+    a.chat = s.chat; a.chatVer = s.chatVer; a.busy = s.busy;
+    // données pour l'humeur du perso : rythme des outils, erreurs, durée de réflexion, fin de tâche
+    s.toolTimes = (s.toolTimes || []).filter(x => now - x < 300000);
+    s.errTimes = (s.errTimes || []).filter(x => now - x < 300000);
+    a.m = {
+      thinkSince: st === 'thinking' ? s.last : 0,
+      intensity: s.toolTimes.filter(x => now - x < 60000).length,
+      errorAt: s.lastError || 0, errors3m: s.errTimes.filter(x => now - x < 180000).length, doneAt: s.doneAt || 0
+    };
+    (s.newLogs || []).forEach(l => addLog(a, l)); s.newLogs = [];
+  });
+}
+
+/* ---------- connexion au dossier (File System Access API) ---------- */
+function idb() {
+  return new Promise((res, rej) => { const r = indexedDB.open('agent-office', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function kvGet(k) { try { const d = await idb(); return await new Promise(r => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(null); }); } catch { return null; } }
+async function kvSet(k, v) { try { const d = await idb(); d.transaction('kv', 'readwrite').objectStore('kv').put(v, k); } catch { } }
+
+function setMode(t) { document.getElementById('mode').textContent = t; }
+let es = null;
+function startStream() {          // mode serveur local : server.js diffuse les lignes des sessions
+  stopAll();
+  const e = es = new EventSource('/stream');
+  let opened = false;
+  document.getElementById('btnDemo').hidden = false;
+  e.onopen = () => { opened = true; setMode('En direct · sessions de ce PC'); };
+  e.onmessage = ev => {
+    const { key, text } = JSON.parse(ev.data);
+    let s = sessions.get(key);
+    if (!s) { const [p, f] = key.split('/'); s = newSession(key, p, f); sessions.set(key, s); }
+    applyText(s, text); syncAgents(Date.now());
+  };
+  // agents pilotés depuis le bureau + demandes de permission
+  e.addEventListener('runs', ev => {
+    const d = JSON.parse(ev.data); RUNS.clear(); PERMS.clear();
+    d.runs.forEach(r => RUNS.set(r.id, r)); d.perms.forEach(p => PERMS.set(p.id, p)); onRunsChanged();
+  });
+  e.addEventListener('run', ev => { const r = JSON.parse(ev.data); RUNS.set(r.id, r); onRunsChanged(r); });
+  e.addEventListener('perm', ev => { const p = JSON.parse(ev.data); PERMS.set(p.id, p); onPerm(p); });
+  e.addEventListener('perm-done', ev => { PERMS.delete(JSON.parse(ev.data).id); onRunsChanged(); });
+  e.onerror = () => { if (!opened) { e.close(); es = null; startDemo(); } else setMode('Serveur injoignable… reconnexion'); };
+  pollTimer = setInterval(() => syncAgents(Date.now()), 1000);
+}
+function stopAll() {
+  if (es) { es.close(); es = null; }
+  clearInterval(demoTimer); clearInterval(pollTimer); pollTimer = null; sessions.clear();
+  [...agents.values()].forEach(removeAgent); renderList(true); renderDetail();
+}
+function startLive(handle) {
+  stopAll(); rootHandle = handle;
+  document.getElementById('btnDemo').hidden = false;
+  setMode('En direct · ' + handle.name);
+  pollOnce(); pollTimer = setInterval(pollOnce, 2000);
+}
+document.getElementById('btnConnect').onclick = async () => {
+  if (location.protocol.startsWith('http')) { startStream(); return; }
+  if (!window.showDirectoryPicker) { alert('Ton navigateur ne gère pas l\'accès aux dossiers. Utilise Chrome ou Edge.'); return; }
+  try {
+    const h = await window.showDirectoryPicker({ id: 'claude-projects', mode: 'read' });
+    await kvSet('root', h); startLive(h);
+  } catch (e) { if (e.name !== 'AbortError') alert('Impossible d\'ouvrir ce dossier : ' + e.message + '\nChoisis le dossier  C:\\Users\\<toi>\\.claude\\projects'); }
+};
+document.getElementById('btnDemo').onclick = startDemo;
+document.getElementById('btnReconnect').onclick = async () => {
+  const h = await kvGet('root'); if (!h) return;
+  if ((await h.requestPermission({ mode: 'read' })) === 'granted') { document.getElementById('btnReconnect').hidden = true; startLive(h); }
+};
+(async () => {
+  if (location.protocol.startsWith('http')) { startStream(); return; }
+  const h = await kvGet('root');
+  if (h) {
+    const b = document.getElementById('btnReconnect'); b.hidden = false; b.textContent = 'Reconnecter ' + h.name;
+    try { if ((await h.queryPermission({ mode: 'read' })) === 'granted') { b.hidden = true; startLive(h); return; } } catch { }
+  }
+  startDemo();
+})();
+</script>
+</body>
+</html>
