@@ -26,12 +26,12 @@ main{flex:1;display:flex;min-height:0}
 #view{flex:1;min-height:0;padding:12px;display:flex;align-items:center;justify-content:center}
 canvas#c{display:block;image-rendering:pixelated;image-rendering:crisp-edges;border-radius:10px}
 /* barre d'outils flottante */
-#tools{position:absolute;top:18px;left:18px;display:flex;gap:6px;flex-wrap:wrap;z-index:2;max-width:calc(100% - 36px)}
-#tools button{background:rgba(31,30,29,.8);border:1px solid #4a4743;padding:5px 9px;font-size:12px;border-radius:8px;backdrop-filter:blur(4px)}
+#tools{flex:none;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:#232120}
+#tools button{background:#2c2a27;border:1px solid #4a4743;padding:5px 9px;font-size:12px;border-radius:8px}
 #tools button:hover{background:#3a3734}
 #tools button.on{background:var(--clay);border-color:var(--clay)}
 #tools .sep{width:1px;background:#4a4743;margin:2px 2px}
-.pop{position:absolute;top:56px;left:18px;background:rgba(42,41,39,.97);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:3;font-size:13px;min-width:250px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.pop{position:absolute;top:52px;left:12px;background:rgba(42,41,39,.97);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:3;font-size:13px;min-width:250px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
 .pop[hidden]{display:none}
 .pop h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--mute)}
 .lg{display:flex;align-items:center;gap:8px;margin:5px 0}

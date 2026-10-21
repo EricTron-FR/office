@@ -98,8 +98,8 @@ splitWall(32, OYp + 2, 7, 14);
 /* ---------- sièges de travail des salles thématiques ---------- */
 function seat(cell, opts) { return Object.assign({ type: 'seat', cell, stand: [cell[0], cell[1] + 1] }, opts); }
 const ZONE_SEATS = {
-  tests: [7, 9, 11, 13].map(x => seat([x, 18], { zone: 'tests', pos: [px(x) + 8, py(18) + 7], k: py(18) + 7, face: 'up', legs: 'stand', label: 'Lance les tests' })),
-  server: [19, 21, 23, 25].map(x => seat([x, 18], { zone: 'server', pos: [px(x) + 8, py(18) + 7], k: py(18) + 7, face: 'up', legs: 'stand', label: 'Build et déploiement' })),
+  tests: [7, 8, 13, 14].map(x => seat([x, 18], { zone: 'tests', pos: [px(x) + 8, py(18) + 7], k: py(18) + 7, face: 'up', legs: 'stand', label: 'Lance les tests' })),
+  server: [18, 19, 23, 24].map(x => seat([x, 18], { zone: 'server', pos: [px(x) + 8, py(18) + 7], k: py(18) + 7, face: 'up', legs: 'stand', label: 'Build et déploiement' })),
   library: [31, 34, 37, 40].map(x => seat([x, 21], { zone: 'library', pos: [px(x) + 8, py(21) + 12], k: py(21) + 12, face: 'down', legs: 'sit', act: 'book', label: 'Lit la doc' }))
 };
 [...ZONE_SEATS.tests, ...ZONE_SEATS.server].forEach(s => block(s.cell[0], s.cell[1] - 1));   // les postes contre le mur
@@ -145,9 +145,12 @@ const errRecent = a => a && a.m && a.m.errorAt && Date.now() - a.m.errorAt < 900
 
 /* ---------- salle de tests ---------- */
 furniture.push({ k: py(18) - 1, draw(t) {          // paillasse contre le mur, un écran par poste
-  const x0 = px(6) + 10, x1 = px(15) - 6, ty = py(17) - 3;
-  R(x0, py(18) + 1, x1 - x0, 2, SHADOW);
-  panel(x0, ty, x1 - x0, 6, '#f6f8f7'); R(x0, ty, x1 - x0, 1, '#ffffff'); panel(x0, ty + 6, x1 - x0, py(18) - ty - 6, '#cfdcd4');
+  const ty = py(17) - 3;
+  [[7, 9], [13, 15]].forEach(([a, b]) => {           // deux îlots, de part et d'autre de l'entrée
+    const x0 = px(a) + 1, x1 = px(b) - 1;
+    R(x0, py(18) + 1, x1 - x0, 2, SHADOW);
+    panel(x0, ty, x1 - x0, 6, '#f6f8f7'); R(x0, ty, x1 - x0, 1, '#ffffff'); panel(x0, ty + 6, x1 - x0, py(18) - ty - 6, '#cfdcd4');
+  });
   ZONE_SEATS.tests.forEach(s => {
     const a = zoneAgent(s), sx = px(s.cell[0]) + 2, sy = py(17) - 16;
     panel(sx, sy, 12, 10, '#1d2422');
@@ -191,8 +194,11 @@ RACKS.forEach(r => furniture.push({ k: py(r.y + 1) - 1, draw(t) {
   });
 } }));
 furniture.push({ k: py(18) - 1, draw(t) {            // consoles contre le mur
-  const x0 = px(18) + 10, x1 = px(26) - 6, ty = py(17) - 3;
-  panel(x0, ty, x1 - x0, 6, '#3a4049'); panel(x0, ty + 6, x1 - x0, py(18) - ty - 6, '#2a2f36');
+  const ty = py(17) - 3;
+  [[18, 20], [23, 25]].forEach(([a, b]) => {         // deux îlots, de part et d'autre de l'entrée
+    const x0 = px(a) + 1, x1 = px(b) - 1;
+    panel(x0, ty, x1 - x0, 6, '#3a4049'); panel(x0, ty + 6, x1 - x0, py(18) - ty - 6, '#2a2f36');
+  });
   ZONE_SEATS.server.forEach(s => {
     const a = zoneAgent(s), sx = px(s.cell[0]) + 2, sy = py(17) - 16;
     panel(sx, sy, 12, 10, '#0f1412');
@@ -367,14 +373,60 @@ HOOKS.floor.push(t => {
   }
 });
 // la vraie pluie (ou neige) de Lyon tombe sur la terrasse
+// nombre pseudo-aléatoire bien réparti (xorshift) : évite que les gouttes voisines tombent en paquets
+const scatter = n => { n = (n * 2654435761 + 1013904223) >>> 0; n ^= n << 13; n >>>= 0; n ^= n >>> 17; n ^= n << 5; return n >>> 0; };
+const PUDDLES = [[35, 8.4, 16], [38.5, 12.3, 12], [34.2, 11.2, 9], [40.3, 7.5, 13], [36.8, 4.6, 8]];
+const SPLASH_ZONE = { x0: 33.2, x1: 41.6, y0: 3.4, y1: 13.6 };
 HOOKS.post.push(t => {
   const sk = skyState(Date.now()); if (!sk.rain && !sk.snow) return;
-  const x0 = px(32) + 13, w = px(42) - x0, y0 = py(3), h = py(14) - y0;
-  for (let i = 0; i < 70; i++) {
-    const hh = hash('rr' + i), x = x0 + hh % w;
-    if (sk.rain) { const y = y0 + Math.round(((hh >> 3) % h + t * 150) % h); R(x, y, 1, 4, 'rgba(200,215,240,.55)'); if (i % 6 === 0) R(x - 1, y0 + (hh >> 7) % h, 3, 1, 'rgba(220,230,250,.35)'); }
-    else { const y = y0 + Math.round(((hh >> 3) % h + t * 18) % h); R(x + Math.round(Math.sin(t + i)), y, 1, 1, '#ffffff'); }
+  const x0 = px(32) + 13, x1 = px(42) - 3, top = OYp, floor0 = py(3), bot = py(14), w = x1 - x0, h = bot - top;
+  g.save(); g.beginPath(); g.rect(x0 - 13, top, x1 - x0 + 13, bot - top); g.clip();
+  if (sk.rain) {
+    const c = WX.code ?? 61, drizzle = c >= 51 && c <= 57, heavy = (c >= 63 && c <= 67) || c >= 81 || sk.storm;
+    const wind = Math.max(0.3, Math.min(1.6, (WX.wind || 8) / 14));     // inclinaison selon le vent
+    // sol mouillé + flaques avec ronds dans l'eau
+    g.fillStyle = 'rgba(30,50,80,' + (drizzle ? 0.07 : 0.14) + ')'; g.fillRect(x0 - 13, floor0, w + 13, bot - floor0);
+    PUDDLES.forEach(([tx, ty, pw], i) => {
+      const cx = px(tx), cy = py(ty);
+      g.fillStyle = 'rgba(110,140,185,.38)'; g.fillRect(cx - pw / 2, cy - 1, pw, 3); g.fillRect(cx - pw / 2 + 2, cy - 2, pw - 4, 5);
+      R(cx - pw / 2 + 2, cy - 2, pw - 6, 1, 'rgba(200,220,245,.35)');
+      const p = (t * (heavy ? 1.6 : 1) + i * 0.37) % 1, rw = Math.round(2 + p * (pw / 2 - 2));
+      g.globalAlpha = 0.7 * (1 - p);
+      R(cx - rw, cy, 1, 1, '#dfeaf8'); R(cx + rw, cy, 1, 1, '#dfeaf8'); R(cx - 1, cy - 1 - Math.round(p), 3, 1, '#dfeaf8'); R(cx - 1, cy + 1 + Math.round(p), 3, 1, '#dfeaf8');
+      g.globalAlpha = 1;
+    });
+    // gouttes : couche lointaine (fine, pâle) et couche proche (longue, nette), inclinées par le vent
+    const n = drizzle ? 70 : heavy ? 190 : 120;
+    for (let i = 0; i < n; i++) {
+      const hh = scatter(i + 1), near = i % 3 === 0, len = drizzle ? 2 : near ? 7 : 4, sp = near ? 210 : 140;
+      const x = x0 + hh % w, y = top + ((hh >>> 3) % h + t * sp) % h;
+      const col = near ? 'rgba(215,228,250,.65)' : 'rgba(190,205,235,.32)';
+      const xx = x0 + (((x - x0 - wind * (y - top) * 0.3) % w) + w) % w;   // la goutte dérive avec le vent pendant sa chute
+      for (let k = 0; k < len; k++) R(Math.round(xx - wind * k * 0.4), Math.round(y + k), 1, 1, col);
+    }
+    // éclaboussures qui rebondissent sur le deck
+    const m = drizzle ? 10 : heavy ? 36 : 22;
+    for (let i = 0; i < m; i++) {
+      const cyc = Math.floor(t * 1.8 + i * 0.13), p = (t * 1.8 + i * 0.13) % 1, hh = scatter(i * 7919 + cyc * 104729);
+      const sx = px(SPLASH_ZONE.x0 + (hh % 1000) / 1000 * (SPLASH_ZONE.x1 - SPLASH_ZONE.x0)), sy = py(SPLASH_ZONE.y0 + ((hh >>> 10) % 1000) / 1000 * (SPLASH_ZONE.y1 - SPLASH_ZONE.y0));
+      if (BLOCKED.has(Math.floor((sx - OXp) / T + XMIN) + ',' + Math.floor((sy - OYp) / T))) continue;
+      const col = 'rgba(225,235,250,.75)';
+      if (p < 0.12) R(sx, sy, 1, 1, col);
+      else if (p < 0.26) { R(sx - 1, sy - 1, 1, 1, col); R(sx + 1, sy - 1, 1, 1, col); R(sx, sy - 2, 1, 1, col); }
+      else if (p < 0.4) { R(sx - 2, sy, 1, 1, 'rgba(225,235,250,.45)'); R(sx + 2, sy, 1, 1, 'rgba(225,235,250,.45)'); }
+    }
+    // gouttes qui tombent du bord du parasol
+    for (let i = 0; i < 4; i++) { const p = (t * 1.3 + i * 0.25) % 1; R(px(39) - 13 + i * 9, py(10) - 20 + Math.round(p * 22), 1, 2, 'rgba(215,228,250,.6)'); }
+  } else {
+    // neige : flocons de tailles variées qui dérivent, fine couche blanche au sol
+    g.fillStyle = 'rgba(240,245,250,.18)'; g.fillRect(x0 - 13, floor0, w + 13, bot - floor0);
+    for (let i = 0; i < 110; i++) {
+      const hh = scatter(i + 50000), big = i % 4 === 0, sp = big ? 22 : 14;
+      const y = top + ((hh >>> 3) % h + t * sp) % h, x = x0 + (hh % w) + Math.round(Math.sin(t * 0.8 + i) * (big ? 3 : 2));
+      R(x, y, big ? 2 : 1, big ? 2 : 1, big ? '#ffffff' : 'rgba(255,255,255,.75)');
+    }
   }
+  g.restore();
 });
 
 /* ====================================================================
