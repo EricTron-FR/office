@@ -191,7 +191,14 @@ function tool(label, title, fn, id) {
   if (id) b.id = id; $tools.appendChild(b); return b;
 }
 const sep = () => { const s = document.createElement('span'); s.className = 'sep'; $tools.appendChild(s); };
-tool('−', 'Dézoomer', () => { VIEW.z = Math.max(1, VIEW.z / 1.3); });
+// panneau de droite repliable (replié d'office sur les petits écrans) : plus de place pour le bureau
+const asideBtn = tool('◧', 'Afficher / masquer le panneau de droite', () => setAside(document.body.classList.contains('noaside')));
+function setAside(show) {
+  document.body.classList.toggle('noaside', !show); asideBtn.classList.toggle('on', !show);
+  SETTINGS.aside = show ? 'show' : 'hide'; saveSettings();
+}
+if (SETTINGS.aside === 'hide' || (!SETTINGS.aside && innerWidth < 1300)) setAside(false);
+tool('−', 'Dézoomer',() => { VIEW.z = Math.max(1, VIEW.z / 1.3); });
 tool('+', 'Zoomer (ou molette)', () => { VIEW.z = Math.min(5, VIEW.z * 1.3); });
 tool('⤢', 'Tout voir', () => { VIEW.z = 1; VIEW.cx = W / 2; VIEW.cy = H / 2; });
 sep();
@@ -572,6 +579,11 @@ function renderSettings() {
     if (c.dataset.c === 'notify' && c.checked && 'Notification' in window) Notification.requestPermission();
     renderList(true);
   });
+  if (typeof EVENTS !== 'undefined') {                    // déclencher un événement pour le voir
+    $settings.insertAdjacentHTML('beforeend', '<h3 style="margin-top:12px">Déclencher un événement</h3><div class="seg" style="flex-wrap:wrap">' +
+      EVENTS.map((e, i) => '<button data-ev="' + i + '">' + esc(e[0]) + '</button>').join('') + '</div>');
+    $settings.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => { triggerEvent(+b.dataset.ev); $settings.hidden = true; });
+  }
   $settings.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => { delete HIDDEN[b.dataset.restore]; saveHidden(); renderSettings(); });
   $settings.querySelector('#saveName').onclick = () => { SETTINGS.owner = $settings.querySelector('#ownerName').value.trim() || 'Eric'; saveSettings(); location.reload(); };
 }

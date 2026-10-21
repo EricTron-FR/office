@@ -35,7 +35,8 @@ function resize() {
 }
 function layoutView() {
   let s = Math.min(CW / W, CH / H) * VIEW.z;
-  if (s * dpr >= 2) s = Math.floor(s * dpr) / dpr;              // facteur entier : pixels parfaits
+  // facteur entier (pixels parfaits) seulement si on y perd peu ; sinon on garde la taille qui remplit l'écran
+  if (s * dpr >= 2 && Math.floor(s * dpr) / (s * dpr) >= 0.9) s = Math.floor(s * dpr) / dpr;
   S = u = s;
   const ww = W * s, hh = H * s;
   OXc = ww <= CW ? (CW - ww) / 2 : Math.min(0, Math.max(CW - ww, CW / 2 - VIEW.cx * s));
@@ -387,7 +388,8 @@ function drawInfoScreen(t, sk) {
 const furniture = [];
 const SCREEN = { working: CLAY, reading: BLUE, thinking: VIOLET, waiting: AMBER };
 var owner = null;                          // Eric, le patron (créé plus bas)
-const everyone = () => owner ? [...agents.values(), owner] : [...agents.values()];
+const NPCS = [];                           // visiteurs de passage (livreur…), hors liste des agents
+const everyone = () => owner ? [...agents.values(), ...NPCS, owner] : [...agents.values(), ...NPCS];
 const someone = fn => everyone().some(fn);
 const playingAt = (cx, cy) => someone(a => !a.path.length && !a.heading && a.act === 'arcade' && Math.floor(a.x) === cx && Math.floor(a.y) === cy);
 
@@ -1050,7 +1052,13 @@ function pickActivity(a, now) {
   for (const [w, go] of opts) { if ((r -= w) <= 0) { go(); return; } }
 }
 function updateAgent(a, dt, now) {
-  if (a.isOwner) updateOwner(a, now);
+  // un événement (évacuation, anniversaire…) peut imposer un lieu pendant un moment
+  if (a.override && now > a.override.until) { a.override = null; a.nextMove = now; if (a.mode !== 'sit') { a.heading = null; a.path = []; } }
+  if (a.override) {
+    const o = a.override;
+    if (!o.sent) { o.sent = true; goTo(a, o.cell, Object.assign({ type: 'spot', cell: o.cell }, o.spot || {})); }
+  }
+  else if (a.isOwner) updateOwner(a, now);
   else if (WORK.has(a.state)) {
     // salle thématique (tests, serveur, bibliothèque) choisie par rooms.js selon l'activité qui dure
     const zs = a.zoneSeat;
@@ -1550,12 +1558,34 @@ cv.addEventListener('mousemove', e => {
   cv.style.cursor = LASER.on ? 'none' : a || hoverCat ? 'pointer' : VIEW.z > 1 ? 'grab' : 'default';
 });
 cv.addEventListener('mouseleave', () => { hoverId = null; hoverCat = null; MOUSE = null; });
-cv.addEventListener('wheel', e => {
-  e.preventDefault();
-  const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, [wx, wy] = toWorld(mx, my);
-  VIEW.z = Math.max(1, Math.min(5, VIEW.z * (e.deltaY < 0 ? 1.2 : 1 / 1.2)));
+// molette : zoom · pavé tactile (Mac) : deux doigts = se déplacer, pincer = zoomer
+function zoomAt(mx, my, factor) {
+  const [wx, wy] = toWorld(mx, my);
+  VIEW.z = Math.max(1, Math.min(6, VIEW.z * factor));
   layoutView();
   VIEW.cx = (CW / 2 - mx) / S + wx; VIEW.cy = (CH / 2 - my) / S + wy; clampView();
+}
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  if (e.ctrlKey) { zoomAt(mx, my, Math.exp(-e.deltaY * 0.012)); return; }                 // pincement
+  const trackpad = e.deltaMode === 0 && (Math.abs(e.deltaX) > 0.5 || Math.abs(e.deltaY) < 40);
+  if (trackpad && VIEW.z > 1.01) { VIEW.cx += e.deltaX / S; VIEW.cy += e.deltaY / S; clampView(); return; }
+  if (trackpad) { zoomAt(mx, my, Math.exp(-e.deltaY * 0.006)); return; }
+  zoomAt(mx, my, e.deltaY < 0 ? 1.2 : 1 / 1.2);
 }, { passive: false });
+// clavier : + / - pour zoomer, 0 pour tout voir, flèches pour se déplacer
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,textarea,select')) return;
+  if (e.key === '+' || e.key === '=') zoomAt(CW / 2, CH / 2, 1.25);
+  else if (e.key === '-') zoomAt(CW / 2, CH / 2, 0.8);
+  else if (e.key === '0') { VIEW.z = 1; VIEW.cx = W / 2; VIEW.cy = H / 2; }
+  else if (e.key.startsWith('Arrow')) {
+    const d = 40 / S;
+    if (e.key === 'ArrowLeft') VIEW.cx -= d; if (e.key === 'ArrowRight') VIEW.cx += d;
+    if (e.key === 'ArrowUp') VIEW.cy -= d; if (e.key === 'ArrowDown') VIEW.cy += d;
+    clampView(); e.preventDefault();
+  }
+});
 
 

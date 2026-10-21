@@ -137,6 +137,8 @@ body.chatting #detail, body.chatting #detailTitle{display:none}
 #newagent{min-width:340px;left:auto;right:18px}
 /* mode kiosque (télé, second écran) */
 body.kiosk header, body.kiosk aside{display:none}
+body.noaside aside{display:none}
+body.noaside.chatting aside{display:flex}
 @media (max-width:820px){main{flex-direction:column}aside{width:auto;border-left:0;border-top:1px solid var(--line)}}
 </style>
 </head>
@@ -173,6 +175,7 @@ body.kiosk header, body.kiosk aside{display:none}
 <script src="rooms.js"></script>
 <script src="features.js"></script>
 <script src="ui.js"></script>
+<script src="events.js"></script>
 <script>
 'use strict';
 /* ====================================================================

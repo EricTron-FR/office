@@ -213,6 +213,7 @@ function onAgentDone(a) {
   news('✅', a.name + ' a terminé sa tâche', 'done');
   if (owner) ericEmote = { icon: '👏', until: NOW() + 3500 };
   checkPizza();
+  if (typeof onDoneEvent === 'function') onDoneEvent(a);          // événements (anniversaire…) : events.js
 }
 let nextCoffeeRun = NOW() + 90000 + Math.random() * 90000;
 HOOKS.update.push((dt, now) => {
