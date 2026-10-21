@@ -79,7 +79,7 @@ function trackChanges() {
     if (e > tr.errorAt) { tr.errorAt = e; pushNews('❌', a.name + ' : échec' + (a.bubble ? ' sur « ' + a.bubble.replace(/^Attend \? /, '').replace(/\s*\(échec\)$/, '') + ' »' : ''), 'error'); sound('error'); }
     const lc = a.logCount || 0;
     if (lc > tr.logCount) {
-      a.log.slice(-(lc - tr.logCount)).forEach(l => { if (l.text.startsWith('🧑') && !a.isSub) pushNews('💬', 'Tu as écrit à ' + a.name); });
+      a.log.slice(-(lc - tr.logCount)).forEach(l => { if (l.text.startsWith('🧑') && !a.isSub && !l.text.includes('📬 Message de')) pushNews('💬', 'Tu as écrit à ' + a.name); });
       tr.logCount = lc;
     }
   });
@@ -323,7 +323,24 @@ function onPerm(p) {
   pushNews('🔐', who + ' demande : ' + permLabel(p), 'waiting'); sound('wait'); notify(who + ' demande ton autorisation : ' + permLabel(p));
   renderPerms();
 }
+// messagerie d'équipe : un agent écrit à un autre, il se lève et va lui parler
+const sentNames = new Map();
+function onMail(m) {
+  const all = [...agents.values()], bySid = sid => sid && all.find(a => a.sessionId === sid);
+  const from = bySid(m.fromSession), to = bySid(m.toSession);
+  const short = m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text;
+  pushNews('✉️', (from ? from.name : m.from) + ' → ' + (to ? to.name : m.to) + ' : ' + short);
+  if (to) addLog(to, '📬 De ' + (from ? from.name : m.from) + ' : ' + short);
+  if (from) addLog(from, '✉️ À ' + (to ? to.name : m.to) + ' : ' + short);
+  if (from && to) chatVisit(from, to);
+}
 function onRunsChanged(r) {
+  RUNS.forEach(run => {                             // le nom d'équipe suit le nom affiché dans le bureau
+    const a = run.status !== 'ended' && [...agents.values()].find(x => x.sessionId === run.sessionId);
+    if (a && API_TOKEN && a.name !== run.name && sentNames.get(run.id) !== a.name) {
+      sentNames.set(run.id, a.name); api('/api/runs/' + run.id + '/name', { name: a.name }).catch(() => { });
+    }
+  });
   if (r && r.error && r.status !== 'running' && r.error !== onRunsChanged.lastErr) {
     onRunsChanged.lastErr = r.error;
     pushNews('⚠️', /not logged in/i.test(r.error) ? 'Claude Code n\'est pas connecté : lance « claude » dans un terminal puis /login' : 'Agent : ' + r.error, 'error');

@@ -201,7 +201,7 @@ function startDemo() {
     a.baseTitle = n; a.title = a.name = NICKS[a.lookKey] || n;
     a.demoNext = performance.now() + i * 900; agents.set(a.id, a);
   });
-  startDemo.nextSub = performance.now() + 15000;
+  startDemo.nextSub = performance.now() + 15000; startDemo.nextMail = performance.now() + 20000;
   demoTimer = setInterval(() => {
     const now = performance.now();
     if (now > startDemo.nextSub) {                     // un agent qui bosse lance un sous-agent
@@ -210,11 +210,22 @@ function startDemo() {
       const parent = parents[Math.floor(Math.random() * parents.length)];
       if (parent) {
         const n = startDemo.subN = (startDemo.subN || 0) + 1, id = 'demo-sub-' + n;
-        const a = makeAgent(id, '', false, id); a.isSub = true; a.cwd = parent.cwd;
+        const a = makeAgent(id, '', false, id); a.isSub = true; a.cwd = parent.cwd; a.parentId = parent.id;
         a.baseTitle = a.title = a.name = '↳ ' + ['Explore le code', 'Écrit les tests', 'Cherche dans la doc', 'Revue de sécurité'][n % 4];
         a.x = parent.x; a.y = parent.y; a.demoSubEnd = now + 25000 + Math.random() * 15000; a.demoNext = 0; agents.set(id, a);
         if (typeof emote === 'function') emote(parent, '👉', 2500);
         pushNews('🧑‍🎓', parent.name + ' lance un sous-agent : ' + a.name.slice(2));
+      }
+    }
+    if (now > startDemo.nextMail) {                    // deux agents s'écrivent
+      startDemo.nextMail = now + 35000 + Math.random() * 30000;
+      const team = [...agents.values()].filter(a => !a.isSub && !a.override);
+      if (team.length > 1) {
+        const a = team.splice(Math.floor(Math.random() * team.length), 1)[0], b = team[Math.floor(Math.random() * team.length)];
+        const txt = ['J\'ai changé l\'API /users, pense à mettre à jour le front', 'Tu as fini la migration ? Je peux lancer les tests ?',
+          'Attention, la CI est rouge sur main', 'J\'ai besoin de ton type User, il est où ?', 'Le déploiement est fait ✅'][Math.floor(Math.random() * 5)];
+        onMail({ from: a.name, to: b.name, text: txt }); addLog(a, '✉️ À ' + b.name + ' : ' + txt); addLog(b, '📬 De ' + a.name + ' : ' + txt); chatVisit(a, b);
+        startDemo.lastMail = [a.id, b.id];
       }
     }
     agents.forEach(a => {
@@ -413,7 +424,7 @@ function syncAgents(now) {
         }
       }
       if (s.sub) {
-        a.isSub = true;
+        a.isSub = true; a.parentId = s.parentKey;
         const parent = agents.get(s.parentKey);
         if (parent) { a.x = parent.x; a.y = parent.y; if (typeof emote === 'function') emote(parent, '👉', 2500); }
         pushNews('🧑‍🎓', (parent ? parent.name : 'Un agent') + ' lance un sous-agent : ' + (s.meta.description || s.meta.agentType || 'mission'));
@@ -473,6 +484,7 @@ function startStream() {          // mode serveur local : server.js diffuse les 
   e.addEventListener('run', ev => { const r = JSON.parse(ev.data); RUNS.set(r.id, r); onRunsChanged(r); });
   e.addEventListener('perm', ev => { const p = JSON.parse(ev.data); PERMS.set(p.id, p); onPerm(p); });
   e.addEventListener('perm-done', ev => { PERMS.delete(JSON.parse(ev.data).id); onRunsChanged(); });
+  e.addEventListener('mail', ev => onMail(JSON.parse(ev.data)));
   e.onerror = () => { if (!opened) { e.close(); es = null; startDemo(); } else setMode('Serveur injoignable… reconnexion'); };
   pollTimer = setInterval(() => syncAgents(Date.now()), 1000);
 }

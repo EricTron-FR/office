@@ -767,14 +767,58 @@ const catOnBilliard = () => cats.some(c => c.spot === BILLIARD_CAT && !c.path.le
 HOOKS.update.push(() => {
   agents.forEach(a => {
     if (!a.leaving) return;
+    const now = performance.now(), boss = agents.get(a.parentId);
     if (!a._leaving) {
       a._leaving = true; a.zoneSeat = null;
-      if (typeof emote === 'function') emote(a, '👋', 2500);
-      goTo(a, DOOR, { type: 'spot', cell: DOOR, face: 'up', label: 'A fini sa mission, s\'en va' });
       if (typeof pushNews === 'function') pushNews('✅', a.name + ' a fini sa mission');
+      const cell = boss && besideOf(boss);
+      if (cell) {                                      // il apporte d'abord son rapport à l'agent qui l'a lancé
+        a._report = 'walk'; emote(a, '📄', 30000);
+        goTo(a, cell, { type: 'spot', cell, face: cell.face, label: 'Apporte son rapport à ' + boss.name });
+      } else leave(a);
+    } else if (a._report === 'walk') {
+      if (!a.path.length && !a.heading) {
+        a._report = 'talk'; a._reportEnd = now + 3500; a.nextMove = now + 4000;
+        emote(a, '📄', 3500); emote(boss, '👍', 3500);
+        if (typeof pushNews === 'function' && boss) pushNews('📄', a.name.replace(/^↳ /, '') + ' : rapport remis à ' + boss.name);
+      }
+    } else if (a._report === 'talk') {
+      if (now > a._reportEnd) leave(a);
     } else if (!a.path.length && !a.heading) {
       removeAgent(a);
       if (typeof sessions !== 'undefined' && sessions.get(a.id)) sessions.get(a.id).done = true;
+    }
+  });
+});
+function leave(a) {
+  a._report = null; emote(a, '👋', 2500);
+  goTo(a, DOOR, { type: 'spot', cell: DOOR, face: 'up', label: 'A fini sa mission, s\'en va' });
+}
+// une case libre juste à côté de quelqu'un, pour venir lui parler (derrière son bureau s'il y est assis)
+function besideOf(b) {
+  const free = (x, y) => !BLOCKED.has(x + ',' + y) && y >= 3;
+  if (b.seat && b.seat.type === 'desk') {
+    const c = [[b.seat.dx + 1, b.seat.dy + 1], [b.seat.dx, b.seat.dy + 1]].find(([x, y]) => free(x, y));
+    if (c) return Object.assign(c, { face: 'up' });
+  }
+  const [x, y] = cellOf(b);
+  const c = [[x + 1, y, 'left'], [x - 1, y, 'right'], [x, y + 1, 'up'], [x, y - 1, 'down']].find(([p, q]) => free(p, q));
+  return c ? Object.assign([c[0], c[1]], { face: c[2] }) : null;
+}
+// un agent va voir un collègue pour lui parler (messagerie d'équipe), puis retourne à sa place
+function chatVisit(a, b) {
+  const cell = besideOf(b); if (!cell || a.leaving) return;
+  a.override = { cell, until: performance.now() + 25000, talk: b.id, spot: { face: cell.face, label: 'Va parler à ' + b.name } };
+  emote(a, '✉️', 3000);
+}
+HOOKS.update.push(() => {
+  const now = performance.now();
+  agents.forEach(a => {
+    const o = a.override;
+    if (!o || !o.talk || !o.sent || a.path.length || a.heading) return;
+    if (!o.talkEnd) {                                // arrivé : on discute quelques secondes
+      o.talkEnd = o.until = now + 5000;
+      emote(a, '💬', 2500); setTimeout(() => emote(agents.get(o.talk), '💬', 2500), 2500);
     }
   });
 });
