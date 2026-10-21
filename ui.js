@@ -299,6 +299,11 @@ function permLabel(p) {
   if (i.url) return p.tool + ' · ' + i.url;
   return p.tool;
 }
+function alwaysLabel(p) {                // même règle que le serveur : « npm test », « git status »… ou l'outil entier
+  if (p.tool !== 'Bash' && p.tool !== 'PowerShell') return p.tool;
+  const w = String((p.input || {}).command || '').trim().split(/\s+/);
+  return w[1] && /^[a-z][\w:.-]*$/i.test(w[1]) ? w[0] + ' ' + w[1] : w[0];
+}
 function permDetail(p) {
   const i = p.input || {};
   if (i.command) return i.command;
@@ -324,12 +329,14 @@ function renderPerms() {
   list.forEach(p => {
     const a = agentOfPerm(p), who = a ? a.name : (p.cwd ? p.cwd.split(/[\\/]/).pop() : 'Agent');
     const el = document.createElement('div'); el.className = 'perm';
-    el.innerHTML = '🔐 <b></b> veut utiliser <b></b><code></code><div class="row"><button>✅ Autoriser</button><button class="no">❌ Refuser</button>' +
+    el.innerHTML = '🔐 <b></b> veut utiliser <b></b><code></code><div class="row" style="flex-wrap:wrap"><button>✅ Autoriser</button><button data-always title="Ne plus me demander pour ça pendant cette session"></button><button class="no">❌ Refuser</button>' +
       (a ? '<button class="no" data-s>Voir</button>' : '') + '</div>';
     const bs = el.querySelectorAll('b'); bs[0].textContent = who; bs[1].textContent = p.tool;
     el.querySelector('code').textContent = permDetail(p);
-    const [ok, no] = el.querySelectorAll('.row button');
+    el.querySelector('[data-always]').textContent = '✅ Toujours « ' + alwaysLabel(p) + ' »';
+    const ok = el.querySelector('.row button'), no = el.querySelector('.row .no');
     ok.onclick = () => api('/api/perm/' + p.id, { allow: true }).catch(e => alert(e.message));
+    el.querySelector('[data-always]').onclick = () => api('/api/perm/' + p.id, { allow: true, always: true }).then(() => pushNews('✅', 'Toujours autorisé pour ' + who + ' : ' + alwaysLabel(p))).catch(e => alert(e.message));
     no.onclick = () => api('/api/perm/' + p.id, { allow: false }).catch(e => alert(e.message));
     const see = el.querySelector('[data-s]'); if (see) see.onclick = () => select(a.id);
     $perms.appendChild(el);
@@ -494,14 +501,38 @@ function renderChat(force) {
   $cperms.innerHTML = '';
   perms.forEach(p => {
     const el = document.createElement('div'); el.className = 'perm';
-    el.innerHTML = '🔐 <b></b> demande ton autorisation<code></code><div class="row"><button>✅ Autoriser</button><button class="no">❌ Refuser</button></div>';
+    el.innerHTML = '🔐 <b></b> demande ton autorisation<code></code><div class="row" style="flex-wrap:wrap"><button>✅ Autoriser</button><button data-always title="Ne plus me demander pour ça pendant cette session"></button><button class="no">❌ Refuser</button></div>';
     el.querySelector('b').textContent = p.tool; el.querySelector('code').textContent = permDetail(p);
-    const [ok, no] = el.querySelectorAll('button');
+    el.querySelector('[data-always]').textContent = '✅ Toujours « ' + alwaysLabel(p) + ' »';
+    const ok = el.querySelector('.row button'), no = el.querySelector('.row .no');
     ok.onclick = () => api('/api/perm/' + p.id, { allow: true }).catch(e => alert(e.message));
+    el.querySelector('[data-always]').onclick = () => api('/api/perm/' + p.id, { allow: true, always: true }).then(() => pushNews('✅', 'Toujours autorisé pour ' + a.name + ' : ' + alwaysLabel(p))).catch(e => alert(e.message));
     no.onclick = () => api('/api/perm/' + p.id, { allow: false }).catch(e => alert(e.message));
     $cperms.appendChild(el);
   });
 }
+// niveau d'autorisation de l'agent piloté (modifiable en cours de route) + ce qui est déjà « toujours autorisé »
+const $cmode = document.createElement('div'); $cmode.className = 'ch-mode';
+$chat.querySelector('.ch-foot').before($cmode);
+const MODES = [['default', '🔐 Me demander à chaque fois'], ['acceptEdits', '📝 Fichiers sans demander (je valide les commandes)'], ['trust', '🚀 Tout sans demander (confiance)']];
+let modeKey = '';
+function renderMode(a) {
+  const run = a && runFor(a.sessionId);
+  const key = run ? run.id + run.mode + (run.rules || []).join('|') : (a ? 'ext' : '');
+  if (key === modeKey) return; modeKey = key;
+  if (!run) {
+    $cmode.innerHTML = a && API_TOKEN ? '<div class="ch-modeinfo">Session ouverte dans ton terminal ou l\'app : change ses autorisations là-bas avec <b>Maj+Tab</b>.</div>' : '';
+    return;
+  }
+  $cmode.innerHTML = '<label>Autorisations <select>' + MODES.map(([v, l]) => '<option value="' + v + '"' + (run.mode === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+    (run.rules && run.rules.length ? '<div class="ch-modeinfo">Toujours autorisé : ' + run.rules.map(r => '<code>' + esc(r) + '</code>').join(' ') + '</div>' : '');
+  $cmode.querySelector('select').onchange = e => {
+    const v = e.target.value;
+    if (v === 'trust' && !confirm('Mode confiance : l\'agent pourra modifier des fichiers ET lancer n\'importe quelle commande sans te demander.\n\nActiver pour cette session ?')) { e.target.value = run.mode; return; }
+    api('/api/runs/' + run.id + '/mode', { mode: v }).then(() => pushNews('🔐', a.name + ' : ' + MODES.find(m => m[0] === v)[1])).catch(err => alert(err.message));
+  };
+}
+setInterval(() => { if (!$chat.hidden) renderMode(agents.get(chatId)); }, 400);
 async function chatSend() {
   const a = agents.get(chatId), text = $cta.value.trim();
   if (!a || !text || !API_TOKEN) return;

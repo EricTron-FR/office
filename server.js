@@ -157,7 +157,26 @@ function broadcast(event, data) {
 /* ---------- agents pilotés depuis le bureau ---------- */
 const runs = new Map();    // id -> run
 const perms = new Map();   // id -> demande de permission en attente
-const runView = r => ({ id: r.id, cwd: r.cwd, sessionId: r.sessionId, status: r.status, mode: r.mode, started: r.started, error: r.error || null });
+const runView = r => ({ id: r.id, cwd: r.cwd, sessionId: r.sessionId, status: r.status, mode: r.policy, rules: r.rules.map(ruleLabel), started: r.started, error: r.error || null });
+
+// niveau d'autorisation (modifiable en cours de route) + règles « toujours autoriser » de la session
+const EDIT_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
+const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
+const cmdOf = input => String((input && input.command) || '').trim();
+function ruleFor(tool, input) {           // « npm test », « git status »… ou l'outil entier
+  if (!SHELL_TOOLS.has(tool)) return { tool };
+  const w = cmdOf(input).split(/\s+/);
+  const prefix = w[1] && /^[a-z][\w:.-]*$/i.test(w[1]) ? w[0] + ' ' + w[1] : w[0];
+  return { tool, prefix };
+}
+const ruleLabel = r => r.prefix ? r.prefix : r.tool;
+function autoAllowed(run, tool, input) {
+  if (!run) return false;
+  if (run.policy === 'trust') return true;
+  if (run.policy === 'acceptEdits' && EDIT_TOOLS.has(tool)) return true;
+  const cmd = cmdOf(input);
+  return run.rules.some(r => r.tool === tool && (!r.prefix || cmd === r.prefix || cmd.startsWith(r.prefix + ' ')));
+}
 
 function startRun({ cwd, prompt, resume, mode }) {
   let st; try { st = fs.statSync(cwd); } catch { throw new Error('Dossier introuvable : ' + cwd); }
@@ -170,10 +189,9 @@ function startRun({ cwd, prompt, resume, mode }) {
     env: { EO_RUN: id, EO_PORT: String(PORT), EO_TOKEN: TOKEN } } } }));
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
     '--mcp-config', cfg, '--permission-prompt-tool', 'mcp__eo__approve'];
-  if (mode === 'acceptEdits') args.push('--permission-mode', 'acceptEdits');
   if (resume) args.push('--resume', resume);
   const proc = spawn(CLAUDE_BIN, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-  const run = { id, proc, cwd, sessionId: resume || null, status: 'running', mode: mode || 'default', started: Date.now(), cfg, errTail: '' };
+  const run = { id, proc, cwd, sessionId: resume || null, status: 'running', policy: mode || 'default', rules: [], started: Date.now(), cfg, errTail: '' };
   runs.set(id, run);
 
   let out = '';
@@ -212,9 +230,13 @@ function sendToRun(run, text) {
   run.proc.stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content: String(text) }, parent_tool_use_id: null }) + '\n');
   broadcast('run', runView(run));
 }
-function decide(pid, allow, message) {
+function decide(pid, allow, message, always) {
   const p = perms.get(pid); if (!p) return false;
   perms.delete(pid);
+  if (allow && always) {                  // « toujours autoriser » : on retient la règle pour cette session
+    const run = runs.get(p.runId), rule = ruleFor(p.view.tool, p.input);
+    if (run && !run.rules.some(r => r.tool === rule.tool && r.prefix === rule.prefix)) { run.rules.push(rule); broadcast('run', runView(run)); }
+  }
   p.reply(allow ? { behavior: 'allow', updatedInput: p.input } : { behavior: 'deny', message: message || 'Refusé depuis Eric Office.' });
   broadcast('perm-done', { id: pid, allow });
   return true;
@@ -275,8 +297,19 @@ const server = http.createServer(async (req, res) => {
         const run = runs.get(m[1]); if (run && run.status !== 'ended') { try { run.proc.stdin.end(); } catch { } setTimeout(() => { try { run.proc.kill(); } catch { } }, 1500); }
         return json(res, 200, { ok: true });
       }
+      if ((m = url.match(/^\/api\/runs\/([0-9a-f]+)\/mode$/))) {   // changer le niveau d'autorisation en cours de route
+        const run = runs.get(m[1]);
+        if (!run || !['default', 'acceptEdits', 'trust'].includes(body.mode)) return json(res, 400, { error: 'Mode inconnu' });
+        run.policy = body.mode; broadcast('run', runView(run));
+        for (const p of [...perms.values()]) if (p.runId === run.id && autoAllowed(run, p.view.tool, p.input)) decide(p.id, true);
+        return json(res, 200, { ok: true });
+      }
       if (url === '/api/perm') {           // appelé par perm-mcp.js : on garde la requête ouverte jusqu'à la décision
         const run = runs.get(body.runId);
+        if (autoAllowed(run, body.tool_name, body.input)) {               // déjà autorisé par le mode ou une règle
+          broadcast('perm-auto', { runId: body.runId, sessionId: run.sessionId, tool: body.tool_name, input: body.input || {} });
+          return json(res, 200, { behavior: 'allow', updatedInput: body.input || {} });
+        }
         const pid = crypto.randomBytes(6).toString('hex');
         const view = { id: pid, runId: body.runId, sessionId: run && run.sessionId, cwd: run && run.cwd, tool: body.tool_name, input: body.input || {}, at: Date.now() };
         perms.set(pid, { id: pid, runId: body.runId, input: body.input || {}, view, reply: decision => json(res, 200, decision) });
@@ -284,7 +317,7 @@ const server = http.createServer(async (req, res) => {
         broadcast('perm', view);
         return;
       }
-      if ((m = url.match(/^\/api\/perm\/([0-9a-f]+)$/))) return json(res, 200, { ok: decide(m[1], !!body.allow) });
+      if ((m = url.match(/^\/api\/perm\/([0-9a-f]+)$/))) return json(res, 200, { ok: decide(m[1], !!body.allow, null, !!body.always) });
       return json(res, 404, { error: 'Inconnu' });
     }
     const f = STATIC[url];
