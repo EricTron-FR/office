@@ -105,7 +105,7 @@ const ZONE_SEATS = {
 [...ZONE_SEATS.tests, ...ZONE_SEATS.server].forEach(s => block(s.cell[0], s.cell[1] - 1));   // les postes contre le mur
 ZONE_SEATS.library.forEach(s => block(...s.cell));
 // en pause, on peut aussi venir lire à la bibliothèque
-ZONE_SEATS.library.forEach(s => IDLE_SEATS.push(Object.assign(Object.create(s), { w: 4, label: 'Lit un bouquin à la bibliothèque', act: 'book', zone: undefined, ok: () => !seatTaken(s) })));
+ZONE_SEATS.library.forEach(s => IDLE_SEATS.push(Object.assign(Object.create(s), { w: 8, label: 'Lit un bouquin à la bibliothèque', act: 'book', zone: undefined, ok: () => !seatTaken(s) })));
 
 // quelle salle selon l'activité ? (vote sur les 40 dernières secondes, avec un temps minimum avant de changer)
 const RX_TEST = /\b(test|tests|jest|vitest|pytest|mocha|spec|playwright|cypress)\b/i;
@@ -128,10 +128,12 @@ HOOKS.update.push((dt, now) => {
     const c = zoneCat(a);
     if (!c) { a.votes.length = 0; a.zone = null; a.zoneSeat = null; return; }
     a.votes.push(c); if (a.votes.length > 40) a.votes.shift();
-    if (a.votes.length < 15 || now - (a.zoneAt || 0) < 40000) return;
+    if (a.votes.length < 10 || now - (a.zoneAt || 0) < 25000) return;
     const n = {}; a.votes.forEach(v => { n[v] = (n[v] || 0) + 1; });
     let want = 'desk';
-    ['tests', 'server', 'library'].forEach(z => { if ((n[z] || 0) / a.votes.length >= 0.55) want = z; });
+    const need = { tests: 0.3, server: 0.35, library: 0.35 };
+    let best = 0;
+    ['tests', 'server', 'library'].forEach(z => { const r = (n[z] || 0) / a.votes.length; if (r >= need[z] && r > best) { best = r; want = z; } });
     if (want === (a.zone || 'desk')) return;
     if (want === 'desk') { a.zone = null; a.zoneSeat = null; a.zoneAt = now; return; }
     const s = ZONE_SEATS[want].find(s => !seatTaken(s, a));
@@ -251,8 +253,8 @@ furniture.push({ k: py(25) + 2, draw() {             // grande table avec lampes
 const BILLIARD = { x: -6, y: 20 };
 [-6, -5, -4].forEach(x => { block(x, 20); block(x, 21); });
 SPOTS.push(
-  { cell: [-7, 20], face: 'right', label: 'Joue au billard', w: 6, act: 'billard' },
-  { cell: [-3, 21], face: 'left', label: 'Joue au billard', w: 6, act: 'billard' }
+  { cell: [-7, 20], face: 'right', label: 'Joue au billard', w: 11, act: 'billard' },
+  { cell: [-3, 21], face: 'left', label: 'Joue au billard', w: 9, act: 'billard' }
 );
 furniture.push({ k: py(22) - 1, draw(t) {
   const x0 = px(-6) + 1, y0 = py(20) - 2, w = 46, h = 32;
@@ -275,7 +277,7 @@ HOOKS.post.push(() => {                              // la queue de billard dans
   });
 });
 // console : grand écran au mur + deux poufs
-const CONSOLE = [[-2, 19], [0, 19]].map(([x, y]) => seat([x, y], { pos: [px(x) + 8, py(y) + 10], k: py(y) + 10.5, face: 'up', legs: null, act: 'console', label: 'Joue à la console', w: 7, stand: [x, y + 1] }));
+const CONSOLE = [[-2, 19], [0, 19]].map(([x, y]) => seat([x, y], { pos: [px(x) + 8, py(y) + 10], k: py(y) + 10.5, face: 'up', legs: null, act: 'console', label: 'Joue à la console', w: 12, stand: [x, y + 1] }));
 CONSOLE.forEach(s => { IDLE_SEATS.push(s); block(...s.cell); });
 HOOKS.floor.push(t => {
   const x0 = px(-2) + 2, y0 = py(LOW.top) + 9, w = 44, h = 22, on = CONSOLE.some(s => zoneAgent(s));
@@ -501,10 +503,10 @@ deco(1, 25, py(26), () => {                          // mange-debout + canettes
   R(cx - 4, by, 8, 1, SHADOW); R(cx, by - 8, 1, 8, '#3a3835'); panel(cx - 3, by - 10, 7, 2, '#d64fa0');
 }, false));
 SPOTS.push(
-  { cell: [-7, 18], face: 'up', label: 'Joue au flipper', w: 5, act: 'flipper' },
-  { cell: [-5, 18], face: 'up', label: 'Choisit un morceau au juke-box', w: 4, act: 'jukebox' },
-  { cell: [3, 24], face: 'right', label: 'Tente la machine à pinces', w: 5, act: 'claw' },
-  { cell: [4, 19], face: 'up', label: 'Joue aux fléchettes', w: 4, act: 'darts' }
+  { cell: [-7, 18], face: 'up', label: 'Joue au flipper', w: 9, act: 'flipper' },
+  { cell: [-5, 18], face: 'up', label: 'Choisit un morceau au juke-box', w: 8, act: 'jukebox' },
+  { cell: [3, 24], face: 'right', label: 'Tente la machine à pinces', w: 8, act: 'claw' },
+  { cell: [4, 19], face: 'up', label: 'Joue aux fléchettes', w: 8, act: 'darts' }
 );
 HOOKS.post.push(t => {                               // fléchettes qui volent
   if (!near([4, 19])) return;
@@ -783,6 +785,16 @@ HOOKS.post.push(() => {
     R(x - 1, y + 12, 1, 3, CLAY); R(x + 1, y + 12, 1, 3, CLAY); panel(x - 2, y + 15, 4, 3, CREAM, OUT); R(x - 1, y + 16, 2, 1, BLUE);
   });
 });
+
+/* ---------- d'autres raisons de descendre en pause ---------- */
+SPOTS.push(
+  { cell: [11, 22], face: 'down', label: 'Observe les fioles du labo', w: 5 },
+  { cell: [16, 22], face: 'left', label: 'Regarde le bras robotique', w: 4 },
+  { cell: [22, 20], face: 'up', label: 'Écoute ronronner les serveurs', w: 5 },
+  { cell: [33, 18], face: 'up', label: 'Range des livres', w: 5 },
+  { cell: [38, 18], face: 'up', label: 'Choisit un livre', w: 5 },
+  { cell: [34, 25], face: 'up', label: 'Feuillette un livre à la grande table', w: 5, act: 'book' }
+);
 
 /* ---------- lumières des nouvelles salles (utilisé par features.js la nuit) ---------- */
 function roomLights(t, add) {

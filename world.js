@@ -129,8 +129,8 @@ const SPOTS = [
   { cell: [25, 4], face: 'up', label: 'Prend un café', w: 12 },
   { cell: [28, 4], face: 'up', label: 'Fouille le frigo', w: 4 },
   { cell: [30, 4], face: 'up', label: 'Choisit un snack', w: 5 },
-  { cell: [3, 18], face: 'up', label: 'Joue à l\'arcade', w: 7, act: 'arcade' },          // salle de jeux
-  { cell: [4, 18], face: 'up', label: 'Joue à l\'arcade', w: 6, act: 'arcade' }
+  { cell: [3, 18], face: 'up', label: 'Joue à l\'arcade', w: 11, act: 'arcade' },          // salle de jeux
+  { cell: [4, 18], face: 'up', label: 'Joue à l\'arcade', w: 9, act: 'arcade' }
 ];
 const IDLE_SEATS = [];   // sièges de pause des autres salles (rooms.js) : { type:'seat', cell, pos, k, face, legs, w, ok? }
 const ACT_LABEL = { guitar: 'Joue de la guitare', book: 'Lit un bouquin', phone: 'Scrolle sur son tel', piano: 'Joue du piano', sleep: 'Fait la sieste', tv: 'Regarde la télé' };
@@ -1033,7 +1033,7 @@ function pickActivity(a, now) {
   }
   const opts = [];
   const si = freeSofa(a);
-  if (si != null) opts.push([26, () => { const act = pick(['guitar', 'guitar', 'tv', 'tv', 'book', 'phone']); goTo(a, sofaSeat(si).cell, Object.assign(sofaSeat(si), { act, label: ACT_LABEL[act] })); }]);
+  if (si != null) opts.push([18, () => { const act = pick(['guitar', 'guitar', 'tv', 'tv', 'book', 'phone']); goTo(a, sofaSeat(si).cell, Object.assign(sofaSeat(si), { act, label: ACT_LABEL[act] })); }]);
   if (!seatUsed(a, s => s.type === 'piano')) opts.push([12, () => goTo(a, [30, 9], { type: 'piano', act: 'piano', label: ACT_LABEL.piano })]);
   if (!seatUsed(a, s => s.type === 'beanbag')) opts.push([6, () => { const act = pick(['phone', 'book']); goTo(a, [30, 11], { type: 'beanbag', act, label: ACT_LABEL[act] }); }]);
   SPOTS.forEach(sp => {
