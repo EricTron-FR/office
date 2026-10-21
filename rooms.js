@@ -303,6 +303,21 @@ block(-8, 27); block(4, 27);
 /* ---------- terrasse ---------- */
 const badWeather = () => { const s = skyState(Date.now()); return s.rain || s.snow || s.storm; };
 const TERRACE_OK = () => !badWeather();
+// la terrasse est interdite (pour les balades, les chats…) quand il pleut, neige ou fait de l'orage
+function outsideBlocked(cell) { return cell[0] >= 33 && cell[1] < 14 && badWeather(); }
+let shelterTick = 0;
+HOOKS.update.push((dt, now) => {                       // il se met à pleuvoir : tout le monde rentre
+  if (now < shelterTick) return; shelterTick = now + 2000;
+  if (!badWeather()) return;
+  cats.forEach(c => {
+    const tgt = c.path.length ? c.path[c.path.length - 1] : null;
+    if (c.ride || c.chasing) return;
+    if ((c.x >= 33 && c.y < 14) || (tgt && outsideBlocked(tgt))) { c.spot = null; c.path = []; c.nextMove = 0; c.z = 0; c.mode = 'walk'; catGo(c, [27, 8], null); }
+  });
+  everyone().forEach(a => {
+    if (a.x >= 33 && a.y < 14 && !a.path.length && !WORK.has(a.state) && !a.isOwner) { a.nextMove = 0; standUp(a); }
+  });
+});
 const LOUNGERS = [34, 36].map(x => seat([x, 6], { pos: [px(x) + 8, py(6) + 11], k: py(6) + 11.5, face: 'down', legs: 'sit', act: 'chill', w: 7, ok: TERRACE_OK, stand: [x, 7], label: 'Se pose sur un transat' }));
 const CAFE = [seat([37, 10], { pos: [px(37) + 9, py(10) + 9], k: py(10) + 10, face: 'right', legs: 'side', w: 5, ok: TERRACE_OK, label: 'Prend un café en terrasse', stand: [37, 11] }),
   seat([40, 10], { pos: [px(40) + 7, py(10) + 9], k: py(10) + 10, face: 'left', legs: 'side', w: 5, ok: TERRACE_OK, label: 'Prend un café en terrasse', stand: [40, 11] })];

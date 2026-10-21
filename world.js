@@ -1044,7 +1044,7 @@ function pickActivity(a, now) {
   opts.push([4, () => {
     let c, n = 0;
     do { c = [Math.floor(Math.random() * 32), 3 + Math.floor(Math.random() * (ROWS - 3))]; } while (BLOCKED.has(c[0] + ',' + c[1]) && ++n < 30);
-    if (!BLOCKED.has(c[0] + ',' + c[1])) goTo(a, c, { type: 'spot', label: 'Se balade' });
+    if (!BLOCKED.has(c[0] + ',' + c[1]) && !(typeof outsideBlocked === 'function' && outsideBlocked(c))) goTo(a, c, { type: 'spot', label: 'Se balade' });
   }]);
   let r = Math.random() * opts.reduce((s, o) => s + o[0], 0);
   for (const [w, go] of opts) { if ((r -= w) <= 0) { go(); return; } }
@@ -1173,7 +1173,7 @@ function updateCat(c, dt, now) {
   if (!c.path.length && now > c.nextMove) {
     const r = Math.random();
     if (r < 0.5) {
-      const free = CAT_SPOTS.filter(s => (!s.cat || s.cat === c.name) && !cats.some(o => o !== c && o.spot === s) && (s.sofa == null || !sofaBusy(s.sofa)) && (!s.beanbag || !someone(a => a.seat && a.seat.type === 'beanbag')));
+      const free = CAT_SPOTS.filter(s => (!s.cat || s.cat === c.name) && !cats.some(o => o !== c && o.spot === s) && (s.sofa == null || !sofaBusy(s.sofa)) && (!s.beanbag || !someone(a => a.seat && a.seat.type === 'beanbag')) && (!s.ok || s.ok()) && !(typeof outsideBlocked === 'function' && outsideBlocked(s.cell)));
       let tot = Math.random() * free.reduce((n, s) => n + s.w, 0);
       const s = free.find(s => (tot -= s.w) <= 0);
       if (s) catGo(c, s.cell, s);
@@ -1182,12 +1182,12 @@ function updateCat(c, dt, now) {
       if (p) {
         const [x, y] = cellOf(p);
         const cell = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].find(([a, b]) => !BLOCKED.has(a + ',' + b) && b >= 3);
-        if (cell) catGo(c, cell, { follow: true });
+        if (cell && !(typeof outsideBlocked === 'function' && outsideBlocked(cell))) catGo(c, cell, { follow: true });
       }
     } else if (r < 0.9) {
       let cell, n = 0;
       do { cell = [XMIN + Math.floor(Math.random() * COLS), 3 + Math.floor(Math.random() * (ROWS - 3))]; } while (BLOCKED.has(cell[0] + ',' + cell[1]) && ++n < 30);
-      if (!BLOCKED.has(cell[0] + ',' + cell[1])) catGo(c, cell, null);
+      if (!BLOCKED.has(cell[0] + ',' + cell[1]) && !(typeof outsideBlocked === 'function' && outsideBlocked(cell))) catGo(c, cell, null);
     } else { c.mode = 'sit'; c.nextMove = now + 6000; }
   }
   if (c.path.length) {
