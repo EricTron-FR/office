@@ -6,7 +6,9 @@
    dans un petit buffer, puis agrandi d'un facteur entier.
    ==================================================================== */
 // colonnes -8..-2 : bureau du CEO · -1 : mur · 0..21 : open space · 22 : mur · 23..31 : salle de pause
-const T = 16, XMIN = -8, XMAX = 32, ROWS = 14, OXp = 4, OYp = 4;
+// rangée du haut (lignes 0-13) : CEO · open space · pause · terrasse (33-41)
+// rangée du bas (lignes 14-27, voir rooms.js) : salle de jeux · tests · serveur · bibliothèque
+const T = 16, XMIN = -8, XMAX = 42, ROWS = 28, OXp = 4, OYp = 4;
 const COLS = XMAX - XMIN;
 const W = OXp * 2 + COLS * T, H = OYp + ROWS * T + 6;
 const px = tx => OXp + Math.round((tx - XMIN) * T), py = ty => OYp + Math.round(ty * T);
@@ -41,10 +43,11 @@ function layoutView() {
 }
 function clampView() { VIEW.cx = Math.max(0, Math.min(W, VIEW.cx)); VIEW.cy = Math.max(0, Math.min(H, VIEW.cy)); }
 // cadre une zone du monde (coordonnées en cases)
-function focusTiles(tx0, tx1) {
-  const x0 = px(tx0), x1 = px(tx1), fit = Math.min(CW / W, CH / H);
-  VIEW.z = Math.max(1, Math.min(5, Math.min(CW / (x1 - x0), CH / H) / fit));
-  VIEW.cx = (x0 + x1) / 2; VIEW.cy = H / 2;
+function focusTiles(tx0, tx1, ty0, ty1) {
+  ty0 = ty0 == null ? 0 : ty0; ty1 = ty1 == null ? ROWS : ty1;
+  const x0 = px(tx0), x1 = px(tx1), y0 = py(ty0), y1 = py(ty1), fit = Math.min(CW / W, CH / H);
+  VIEW.z = Math.max(1, Math.min(5, Math.min(CW / (x1 - x0), CH / (y1 - y0)) / fit));
+  VIEW.cx = (x0 + x1) / 2; VIEW.cy = (y0 + y1) / 2;
 }
 const toCss = (x, y) => [OXc + x * S, OYc + y * S];
 const toWorld = (x, y) => [(x - OXc) / S, (y - OYc) / S];
@@ -125,13 +128,15 @@ const SPOTS = [
   { cell: [25, 4], face: 'up', label: 'Prend un café', w: 12 },
   { cell: [28, 4], face: 'up', label: 'Fouille le frigo', w: 4 },
   { cell: [30, 4], face: 'up', label: 'Choisit un snack', w: 5 },
-  { cell: [31, 7], face: 'up', label: 'Joue à l\'arcade', w: 10, act: 'arcade' }
+  { cell: [3, 18], face: 'up', label: 'Joue à l\'arcade', w: 7, act: 'arcade' },          // salle de jeux
+  { cell: [4, 18], face: 'up', label: 'Joue à l\'arcade', w: 6, act: 'arcade' }
 ];
+const IDLE_SEATS = [];   // sièges de pause des autres salles (rooms.js) : { type:'seat', cell, pos, k, face, legs, w, ok? }
 const ACT_LABEL = { guitar: 'Joue de la guitare', book: 'Lit un bouquin', phone: 'Scrolle sur son tel', piano: 'Joue du piano', sleep: 'Fait la sieste', tv: 'Regarde la télé' };
 const BLOCKED = new Set();
 const block = (x, y) => BLOCKED.add(x + ',' + y);
 for (let y = 0; y < 3; y++) for (let x = XMIN; x < XMAX; x++) block(x, y);
-for (let y = 3; y < ROWS; y++) if (y !== 7 && y !== 8) { block(22, y); block(-1, y); }   // murs de séparation, portes en 7-8
+for (let y = 3; y < 14; y++) if (y !== 7 && y !== 8) { block(22, y); block(-1, y); }   // murs de séparation, portes en 7-8
 // bureau du CEO
 const CEO_SEAT = { type: 'desk', dx: -5.5, dy: 7, ceo: true };
 [[-6, 7], [-5, 7], [-4, 7], [-5, 6], [-3, 3], [-2, 3], [-8, 3], [-8, 11], [-7, 11], [-6, 10], [-4, 10], [-2, 9]].forEach(c => block(...c));
@@ -139,7 +144,7 @@ DESKS.forEach(d => { block(d.dx, d.dy); block(d.dx + 1, d.dy); block(d.dx, d.dy 
 for (let x = 23; x < 29; x++) block(x, 3);                                 // comptoir + frigo
 for (let i = 0; i < SOFA.n; i++) block(SOFA.x + i, SOFA.y);
 [[13, 3], [14, 3], [15, 3], [21, 3], [0, 11], [0, 13], [21, 13],
- [30, 3], [31, 3], [31, 9], [31, 10], [30, 9], [30, 10], [31, 6], [29, 10], [30, 11], [26, 12], [27, 12], [26, 13], [27, 13], [23, 13], [31, 13]]
+ [30, 3], [31, 3], [31, 9], [31, 10], [30, 9], [30, 10], [3, 17], [4, 17], [29, 10], [30, 11], [26, 12], [27, 12], [26, 13], [27, 13], [23, 13], [31, 13]]
   .forEach(c => block(...c));
 
 /* ---------- fond statique ---------- */
@@ -688,9 +693,9 @@ furniture.push({ // télé face au canapé (on voit son dos, l'écran éclaire l
     R(x0 + w - 6, y0 - 1, 1, 1, on ? GREEN : '#a33');
   }
 });
-[[31, VIOLET, '#5a4a8a']].forEach(([tx, c1, c2]) => furniture.push({ // bornes d'arcade
-  k: py(7) + 1, draw(t) {
-    const x0 = px(tx) + 2, w = 12, top = py(6) - 14, bot = py(7) + 1, on = playingAt(tx, 7);
+[[3, VIOLET, '#5a4a8a'], [4, BLUE, '#3f6b8e']].forEach(([tx, c1, c2]) => furniture.push({ // bornes d'arcade (salle de jeux)
+  k: py(18) + 1, draw(t) {
+    const x0 = px(tx) + 2, w = 12, top = py(17) - 14, bot = py(18) + 1, on = playingAt(tx, 18);
     R(x0, bot, w + 1, 2, SHADOW);
     panel(x0, top, w, bot - top, c2); R(x0, top, w, 4, c1); spark(x0 + 6, top + 2, 1, CREAM);
     R(x0 + 2, top + 6, 8, 8, '#141320');
@@ -961,6 +966,7 @@ function standUp(a) {
     if (s.type === 'sofa') { a.x = s.cell[0] + 0.5; a.y = SOFA.y + 1.5; }
     if (s.type === 'piano') { a.x = 29.5; a.y = 9.5; }
     if (s.type === 'beanbag') { a.x = 30.5; a.y = 12.5; }
+    if (s.stand) { a.x = s.stand[0] + 0.5; a.y = s.stand[1] + 0.5; }
   }
   a.mode = 'stand'; a.seat = null; a.act = null; a.actLabel = '';
 }
@@ -977,8 +983,8 @@ function arrive(a) {
     if (s && s.face) a.face = s.face;
     a.nextMove = performance.now() + 7000 + Math.random() * 9000; return;
   }
-  a.seat = s; a.mode = 'sit'; a.face = s.type === 'piano' ? 'right' : 'down';
-  a.nextMove = performance.now() + (s.type === 'desk' ? 0 : 14000 + Math.random() * 16000);
+  a.seat = s; a.mode = 'sit'; a.face = s.face || (s.type === 'piano' ? 'right' : 'down');
+  a.nextMove = performance.now() + (s.type === 'desk' || s.zone ? 0 : 14000 + Math.random() * 16000);
   if (s.ceo) { a.state = 'working'; a.actLabel = 'Bosse à son bureau'; a.nextMove = performance.now() + 25000 + Math.random() * 25000; }
 }
 // Eric : bosse à son bureau, puis sort voir un agent, prendre un café ou faire une pause, et revient
@@ -1030,7 +1036,10 @@ function pickActivity(a, now) {
   if (!seatUsed(a, s => s.type === 'beanbag')) opts.push([6, () => { const act = pick(['phone', 'book']); goTo(a, [30, 11], { type: 'beanbag', act, label: ACT_LABEL[act] }); }]);
   SPOTS.forEach(sp => {
     const busy = everyone().some(o => o !== a && ((o.heading && o.heading.cell === sp.cell) || (!o.path.length && !o.seat && cellOf(o)[0] === sp.cell[0] && cellOf(o)[1] === sp.cell[1])));
-    if (!busy) opts.push([sp.w, () => goTo(a, sp.cell, Object.assign({ type: 'spot' }, sp))]);
+    if (!busy && (!sp.ok || sp.ok())) opts.push([sp.w, () => goTo(a, sp.cell, Object.assign({ type: 'spot' }, sp))]);
+  });
+  IDLE_SEATS.forEach(s => {
+    if ((!s.ok || s.ok()) && !seatUsed(a, x => x === s)) opts.push([s.w, () => goTo(a, s.cell, s)]);
   });
   opts.push([4, () => {
     let c, n = 0;
@@ -1043,9 +1052,12 @@ function pickActivity(a, now) {
 function updateAgent(a, dt, now) {
   if (a.isOwner) updateOwner(a, now);
   else if (WORK.has(a.state)) {
-    const wantType = a.desk ? 'desk' : 'sofa';
-    const ok = (a.seat && a.seat.type === wantType) || (a.heading && a.heading.type === wantType);
-    if (!ok) {
+    // salle thématique (tests, serveur, bibliothèque) choisie par rooms.js selon l'activité qui dure
+    const zs = a.zoneSeat;
+    const wantType = zs ? 'zone' : a.desk ? 'desk' : 'sofa';
+    const ok = zs ? (a.seat === zs || a.heading === zs) : (a.seat && a.seat.type === wantType) || (a.heading && a.heading.type === wantType);
+    if (!ok && zs) goTo(a, zs.cell, zs);
+    else if (!ok) {
       if (a.desk) goTo(a, [a.desk.dx, a.desk.dy - 1], { type: 'desk', dx: a.desk.dx, dy: a.desk.dy });
       else { const i = freeSofa(a); if (i != null) goTo(a, sofaSeat(i).cell, sofaSeat(i)); }
     }
@@ -1054,9 +1066,9 @@ function updateAgent(a, dt, now) {
       if (!a.nextSip) a.nextSip = now + 6000 + Math.random() * 10000;
       if (now > a.nextSip) { a.sipUntil = now + 1800; a.nextSip = now + 14000 + Math.random() * 16000; }
     }
-  } else if (a.mode === 'sit' && a.seat && a.seat.type === 'desk') {
+  } else if (a.mode === 'sit' && a.seat && (a.seat.type === 'desk' || a.seat.zone)) {
     standUp(a); a.nextMove = now + 800;
-  } else if (a.heading && a.heading.type === 'desk') {
+  } else if (a.heading && (a.heading.type === 'desk' || a.heading.zone)) {
     a.path = []; a.heading = null; a.nextMove = now;
   } else if (!a.heading && !a.path.length && now > a.nextMove) {
     pickActivity(a, now);
@@ -1072,6 +1084,7 @@ function updateAgent(a, dt, now) {
 function screenPos(a) {
   if (a.mode === 'sit' && a.seat) {
     const s = a.seat;
+    if (s.pos) return s.pos;
     if (s.type === 'desk') return [px(s.dx + 1), py(s.dy) - 2];
     if (s.type === 'piano') return [px(30) + 8, py(10) + 8];
     if (s.type === 'beanbag') return [px(30.5), py(11) + 12];
@@ -1082,6 +1095,7 @@ function screenPos(a) {
 function sortKey(a) {
   if (a.mode === 'sit' && a.seat) {
     const s = a.seat;
+    if (s.k != null) return s.k;
     if (s.type === 'desk') return py(s.dy) + 3;
     if (s.type === 'piano') return py(10) + 8;
     if (s.type === 'beanbag') return py(11) + 10;
@@ -1269,7 +1283,7 @@ function drawPerson(a, t) {
   let [x, y] = screenPos(a);
   const sel = a.id === selectedId, seat = a.mode === 'sit' && a.seat ? a.seat.type : null;
   const walking = a.path.length > 0, frame = walking ? 1 + Math.floor(t * 7) % 2 : 0;
-  const face = seat === 'piano' ? 'right' : seat ? 'down' : a.face, side = face === 'left' || face === 'right';
+  const face = seat === 'piano' ? 'right' : seat === 'seat' ? (a.seat.face || 'down') : seat ? 'down' : a.face, side = face === 'left' || face === 'right';
   const mood = a.mood = computeMood(a, nowMs);
   if (mood === 'angry' || mood === 'furious') x += Math.floor(t * 18) % 2 ? 1 : -1;
   if (!seat) {
@@ -1280,6 +1294,8 @@ function drawPerson(a, t) {
   if (!seat) legs = side ? LEGS.side[frame] : LEGS.fb[frame];
   else if (seat === 'sofa' || seat === 'beanbag') legs = LEGS.sit;
   else if (seat === 'piano') legs = LEGS.sitSide;
+  else if (seat === 'seat') legs = { sit: LEGS.sit, side: LEGS.sitSide, stand: side ? LEGS.side[0] : LEGS.fb[0] }[a.seat.legs] || null;
+  if (seat === 'seat' && a.seat.legs === 'stand') R(x - 5, y - 1, 10, 2, 'rgba(60,40,20,.22)');   // debout à un poste : ombre au sol
   const rows = buildRows(a, face, legs, a.state === 'asleep' || a.act === 'sleep');
   let by = y;
   if (walking && frame === 1) by -= 1;
@@ -1295,7 +1311,7 @@ function drawPerson(a, t) {
   const head = top + (a.style === 2 ? 2 : 0), body = head + 12;   // haut de la tête / du t-shirt
 
   // accessoires selon l'activité
-  if (seat === 'sofa' || seat === 'beanbag') {
+  if (seat === 'sofa' || seat === 'beanbag' || (seat === 'seat' && a.seat.legs === 'sit')) {
     if (a.act === 'guitar') {
       for (let i = 0; i < 7; i++) R(x - i, body + 1 - (i >> 1), 1, 2, '#6e4c38');
       panel(x - 9, body - 4, 2, 3, '#3a2a22', OUT);
@@ -1355,7 +1371,7 @@ function drawPerson(a, t) {
   }
 
   if (sel) { const b = Math.floor(t * 3) % 2; R(x - 2, top - 6 - b, 5, 1, CLAY); R(x - 1, top - 5 - b, 3, 1, CLAY); R(x, top - 4 - b, 1, 1, CLAY); }
-  const fy = seat === 'desk' ? py(a.seat.dy + 1) + 3 : seat === 'sofa' ? py(SOFA.y + 1) : seat === 'piano' ? py(10) + 9 : seat === 'beanbag' ? py(12) : y;
+  const fy = seat === 'seat' ? y + 2 : seat === 'desk' ? py(a.seat.dy + 1) + 3 : seat === 'sofa' ? py(SOFA.y + 1) : seat === 'piano' ? py(10) + 9 : seat === 'beanbag' ? py(12) : y;
   a._anchor = { x, y: top - (sel ? 6 : 1), fy };
   a._box = [x - 7, top - 1, 14, (seat === 'desk' ? y + 8 : y + 1) - top];
 }

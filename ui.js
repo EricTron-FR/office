@@ -195,9 +195,19 @@ tool('−', 'Dézoomer', () => { VIEW.z = Math.max(1, VIEW.z / 1.3); });
 tool('+', 'Zoomer (ou molette)', () => { VIEW.z = Math.min(5, VIEW.z * 1.3); });
 tool('⤢', 'Tout voir', () => { VIEW.z = 1; VIEW.cx = W / 2; VIEW.cy = H / 2; });
 sep();
-tool('CEO', 'Bureau de ' + OWNER, () => focusTiles(-8, -1));
-tool('Open space', 'Open space', () => focusTiles(0, 22));
-tool('Pause', 'Salle de pause', () => focusTiles(23, 32));
+{ // aller dans une pièce
+  const PLACES = [['Tout le bureau', null], ['Bureau de ' + OWNER, [-8, -1, 0, 14]], ['Open space', [0, 22, 0, 14]], ['Salle de pause', [23, 32, 0, 14]],
+    ['Terrasse', [32, 42, 0, 14]], ['Salle de jeux', [-8, 5, 14, 28]], ['Salle de tests', [5, 17, 14, 28]], ['Salle serveur', [17, 27, 14, 28]], ['Bibliothèque', [27, 42, 14, 28]]];
+  const sel = document.createElement('select');
+  sel.style.cssText = 'background:rgba(31,30,29,.8);border:1px solid #4a4743;color:var(--cream);border-radius:8px;padding:4px 6px;font:inherit;font-size:12px;cursor:pointer';
+  sel.innerHTML = '<option value="">📍 Aller à…</option>' + PLACES.map((p, i) => '<option value="' + i + '">' + esc(p[0]) + '</option>').join('');
+  sel.onchange = () => {
+    const p = PLACES[+sel.value]; if (!p) return;
+    if (p[1]) focusTiles(...p[1]); else { VIEW.z = 1; VIEW.cx = W / 2; VIEW.cy = H / 2; }
+    sel.value = '';
+  };
+  $tools.appendChild(sel);
+}
 sep();
 tool('🔴 Laser', 'Les chats courent après ta souris', b => {
   LASER.on = !LASER.on; b.classList.toggle('on', LASER.on);

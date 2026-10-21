@@ -226,7 +226,7 @@ function allowed(req) {
 
 const STATIC = {
   '/': ['index.html', 'text/html'], '/index.html': ['index.html', 'text/html'],
-  '/world.js': ['world.js', 'text/javascript'], '/features.js': ['features.js', 'text/javascript'], '/ui.js': ['ui.js', 'text/javascript']
+  '/world.js': ['world.js', 'text/javascript'], '/features.js': ['features.js', 'text/javascript'], '/rooms.js': ['rooms.js', 'text/javascript'], '/ui.js': ['ui.js', 'text/javascript']
 };
 
 const server = http.createServer(async (req, res) => {

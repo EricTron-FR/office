@@ -32,12 +32,13 @@ function collectLights(t) {
   add(px(-6) + 4, py(7) - 4, 22, 0.7, '#ffe9b0');               // lampe du bureau
   add(px(29) + 8, OYp + 16, 26, 0.8, CLAY);                     // néon étincelle
   add(px(31), py(3), 26, 0.6, '#fff1d6');                       // distributeur
-  add(px(31) + 8, py(6) - 4, 20, 0.7, VIOLET);                  // borne d'arcade
+  add(px(3) + 8, py(17) - 4, 18, 0.7, VIOLET); add(px(4) + 8, py(17) - 4, 18, 0.7, BLUE);   // bornes d'arcade
   if (someone(a => a.act === 'tv' && a.mode === 'sit')) add(px(27), py(13), 40, 0.8, [BLUE, VIOLET, CLAY, GREEN][Math.floor(t * 0.8) % 4]);
   add(px(-7) + 2, py(11) - 3, 18, 0.6, '#5aa3c9');              // aquarium
   if (TV.on) add(TVRECT.x + TVRECT.w / 2, TVRECT.y + 22, 40, 0.8, [BLUE, VIOLET, CLAY][Math.floor(t * 0.5) % 3]);   // télé murale
   if (SEASON.halloween) PUMPKINS.forEach(([x, y]) => add(px(x) + 8, py(y) + 8, 22, 0.8, '#ff9a3a'));
   if (SEASON.christmas) add(px(29) + 8, py(8), 30, 0.8, '#ffe08a');
+  if (typeof roomLights === 'function') roomLights(t, add);      // salles du bas + terrasse (rooms.js)
   return L;
 }
 HOOKS.light.push((t, sky) => {
@@ -150,17 +151,17 @@ HOOKS.floor.push(() => {   // cadre doré sous la plaque du CEO
 SPOTS.push(
   { cell: [24, 5], face: 'right', label: 'Papote près du café', w: 5, act: 'chat' },
   { cell: [26, 5], face: 'left', label: 'Papote près du café', w: 5, act: 'chat' },
-  { cell: [25, 7], face: 'right', label: 'Baby-foot', w: 6, act: 'babyfoot' },
-  { cell: [28, 7], face: 'left', label: 'Baby-foot', w: 6, act: 'babyfoot' }
+  { cell: [-2, 23], face: 'right', label: 'Baby-foot', w: 6, act: 'babyfoot' },
+  { cell: [1, 23], face: 'left', label: 'Baby-foot', w: 6, act: 'babyfoot' }
 );
-block(26, 7); block(27, 7);
+block(-1, 23); block(0, 23);
 const EMOJIS = ['☕', '😂', '💡', '🐱', '🎮', '🍕', '👀', '🔥', '🤔', '🎉', '🐛', '🚀'];
 const parked = a => !a.path.length && !a.heading && !a.seat;
 furniture.push({   // table de baby-foot
-  k: py(8) - 2, draw(t) {
-    const x0 = px(26) + 2, w = 28, y0 = py(7) + 1;
-    const p1 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === 25);
-    const p2 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === 28);
+  k: py(24) - 2, draw(t) {
+    const x0 = px(-1) + 2, w = 28, y0 = py(23) + 1;
+    const p1 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === -2);
+    const p2 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === 1);
     R(x0, y0 + 13, w + 1, 2, SHADOW);
     panel(x0, y0, w, 11, '#5e3a28'); R(x0 + 2, y0 + 2, w - 4, 7, '#5d9a5f');
     R(x0 + 13, y0 + 2, 1, 7, '#e9f2e0'); R(x0 + 2, y0 + 4, 1, 3, '#e9f2e0'); R(x0 + w - 3, y0 + 4, 1, 3, '#e9f2e0');
