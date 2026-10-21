@@ -400,7 +400,18 @@ function syncAgents(now) {
       if (!a && now - s.last > 120000) { s.done = true; return; }   // déjà fini avant qu'on ouvre la page
     }
     if (!a) {
-      a = makeAgent(key, '', false, s.sub ? key : s.project); agents.set(key, a);
+      // 2e session sur le même projet : sa propre tête, son propre bureau et un numéro (sinon on dirait un clone)
+      const twins = !s.sub ? [...agents.values()].filter(o => !o.isSub && o.project === s.project).length : 0;
+      a = makeAgent(key, '', false, s.sub ? key : twins ? key : s.project); agents.set(key, a);
+      a.project = s.project; a.twin = twins ? twins + 1 : 0;
+      if (twins) {                                     // un t-shirt d'une autre couleur que ses « jumeaux »
+        const used = new Set([...agents.values()].filter(o => o !== a && o.project === s.project).map(o => o.pal.T));
+        const shirt = SHIRTS.map((c, i) => SHIRTS[(i + a.lookHash) % SHIRTS.length]).find(c => !used.has(c));
+        if (shirt) {
+          Object.assign(a.pal, { T: shirt, A: shade(shirt, -0.2), C: shirt === CLAY ? CREAM : CLAY }); delete a.pal.__c;
+          a.palRed = Object.assign({}, a.pal, { S: a.palRed.S, R: a.palRed.R });
+        }
+      }
       if (s.sub) {
         a.isSub = true;
         const parent = agents.get(s.parentKey);
@@ -409,7 +420,8 @@ function syncAgents(now) {
       }
     }
     if (s.sub && !s.busy && !s.pending.size && now - s.last > 6000) a.leaving = true;
-    const title = s.sub ? '↳ ' + (s.meta.description || s.meta.agentType || 'sous-agent') : s.title || baseName(s.cwd) || key.slice(-8);
+    const title = s.sub ? '↳ ' + (s.meta.description || s.meta.agentType || 'sous-agent')
+      : (s.title || baseName(s.cwd) || key.slice(-8)) + (a.twin && !s.title ? ' #' + a.twin : '');
     a.baseTitle = title; a.title = a.name = NICKS[a.lookKey] || title; a.cwd = s.cwd;
     let [st, txt] = computeState(s, now);
     a.sessionId = key.split('/').pop().replace(/\.jsonl$/, '');
