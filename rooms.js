@@ -369,6 +369,15 @@ const pot = (cx, by, big) => {
     : [[-6, -6, 3, 6, '#6f8a52'], [-2, -11, 3, 11, '#7f9c5f'], [3, -7, 3, 7, '#86a566']]);
 };
 
+/* --- objets du tileset intérieur (vases, caisses, bougie) --- */
+const tdeco = (tx, ty, sx, sy, sw, sh) => deco(tx, ty, py(ty) + 14, () => { if (typeof tOk === 'function' && tOk()) blit(TILES.int, sx, sy, sw, sh, px(tx) + 8 - (sw >> 1), py(ty) + 15 - sh); });
+tdeco(28, 17, 240, 224, 16, 16); tdeco(31, 17, 224, 224, 16, 16);          // vases à l'entrée de la bibliothèque
+tdeco(41, 7, 180, 164, 24, 24);                                            // caisses en bois sur la terrasse
+furniture.push({ k: py(25) + 3, draw(t) {                                  // bougie sur la grande table
+  if (!(typeof tOk === 'function' && tOk())) return;
+  blit(TILES.int, 244, 164, 8, 16, px(33) + 30, py(24) - 10);
+} });
+
 /* --- bibliothèque --- */
 deco(29, 25, py(26), t => {                          // globe terrestre
   const cx = px(29) + 8, by = py(25) + 14, sp = Math.floor(t * 2) % 4;
@@ -458,7 +467,9 @@ function pkTree(cx, by, small) {
   R(cx - s(8), ccy - s(9), 3, 1, '#b8f0a0'); R(cx - s(10), ccy - s(7), 2, 1, '#b8f0a0');   // reflet
 }
 const TREES = [[24, 18]];
-const tree = (cx, by, r) => typeof tOk === 'function' && tOk() ? tileTree(cx, by) : pkTree(cx, by, r);
+// les arbres restent dans le jardin (sans déborder sur la bibliothèque)
+const tree = (cx, by, r) => { g.save(); g.beginPath(); g.rect(px(GARDEN.x0), 0, px(GARDEN.x1) + 3 - px(GARDEN.x0), H); g.clip();
+  if (typeof tOk === 'function' && tOk()) tileTree(cx, by); else pkTree(cx, by, r); g.restore(); };
 TREES.forEach(([x, y]) => { block(x, y); block(x + 1, y); furniture.push({ k: py(y) + 14, draw() { tree(px(x + 1), py(y) + 14); } }); });
 // bordure de forêt, comme au bord des routes : deux rangées d'arbres serrés en bas, une colonne à gauche
 for (let x = GARDEN.x0; x < GARDEN.x1; x += 2) {
