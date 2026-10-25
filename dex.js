@@ -121,7 +121,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$dex.hidd
 $dex.addEventListener('click', e => { if (e.target === $dex) closeDex(); });
 const imgTag = (id, kind, cls) => '<img class="' + (cls || '') + '" src="' + SPRITE[kind](id) + '" alt="' + esc(dexName(id)) + '" loading="lazy" onerror="this.classList.add(\'nf\')">';
 function renderDex() {
-  const tabs = [['roue', '🎡 Roue'], ['dex', '📕 Pokédex'], ['jardin', '🌳 Mon jardin'], ['badges', '🏅 Badges & défis']];
+  const tabs = [['roue', '🎡 Roue'], ['dex', '📕 Pokédex'], ['jardin', '🌳 Mon jardin'], ['potager', '🌱 Potager'], ['badges', '🏅 Badges & défis']];
   $dex.innerHTML = '<div class="dx-frame"><div class="dx-top"><span class="dx-led"></span><span class="dx-led s r"></span><span class="dx-led s y"></span><span class="dx-led s g"></span>' +
     '<b>POKÉDEX</b><span class="dx-sp"></span><span class="dx-chip">🎟 ' + DEX.tickets + ' ticket' + (DEX.tickets > 1 ? 's' : '') + '</span><span class="dx-chip" title="Pièces : gagnées avec les doublons">🪙 ' + (DEX.coins || 0) + '</span>' +
     '<span class="dx-chip">' + caughtCount() + ' / ' + DEX_N + '</span><button class="dx-x dx-mute" title="Sons du gacha">' + (SETTINGS.gachaMute ? '🔇' : '🔊') + '</button><button class="dx-x" title="Fermer (Échap)">✕</button></div>' +
@@ -135,6 +135,7 @@ function renderDex() {
   else if (dexTab === 'roue') renderWheel(body);
   else if (dexTab === 'dex') renderGrid(body);
   else if (dexTab === 'badges' && typeof renderBadges === 'function') renderBadges(body);
+  else if (dexTab === 'potager' && typeof renderFarm === 'function') renderFarm(body);
   else renderTeam(body);
 }
 

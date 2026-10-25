@@ -493,7 +493,7 @@ HOOKS.floor.push(t => {
   });
 });
 // petites fleurs qui se balancent dans l'herbe
-const FLOWER_BEDS = [[0, 3, 17, 18, '#ff5050'], [15, 19, 17, 18, '#ffffff'], [22, 24, 20, 21, '#ff5050'], [-6, -3, 22, 23, '#ffffff'], [7, 10, 25, 27, '#ff5050'], [17, 20, 19, 20, '#ff8fd0']];
+const FLOWER_BEDS = [[0, 3, 17, 18, '#ff5050'], [15, 18, 17, 18, '#ffffff'], [22, 24, 20, 21, '#ff5050'], [-6, -3, 22, 23, '#ffffff'], [7, 10, 25, 27, '#ff5050'], [15, 19, 19, 20, '#ff8fd0']];
 const FLOWERS = [];
 FLOWER_BEDS.forEach(([xa, xb, ya, yb, c]) => { for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) if (!BLOCKED.has(x + ',' + y) && !PATH_CELLS.has(x + ',' + y)) FLOWERS.push({ x: px(x), y: py(y), c }); });
 HOOKS.floor.push(t => {
@@ -550,13 +550,7 @@ furniture.push({ k: py(18) + 8, draw() {
   panel(x0, by - 17, 30, 6, '#b8703e'); R(x0, by - 14, 30, 1, '#8a5030');
   panel(x0, by - 8, 30, 4, '#c8803e'); R(x0 + 2, by - 4, 2, 4, '#6a3e22'); R(x0 + 26, by - 4, 2, 4, '#6a3e22');
 } });
-// arbre à baies (comme les baies Pokémon)
-deco(21, 18, py(18) + 14, t => {
-  const cx = px(21) + 8, by = py(18) + 14;
-  pkTree(cx, by, true);
-  [[-6, -18, '#e0533f'], [3, -21, '#4f86d6'], [-2, -24, '#e0533f'], [5, -15, '#f2b23a'], [-7, -12, '#4f86d6']].forEach(([x, y, c]) => { R(cx + x - 1, by + y - 1, 4, 4, OUT); R(cx + x, by + y, 2, 2, c); R(cx + x, by + y, 1, 1, '#ffffff'); });
-});
-SPOTS.push({ cell: [21, 19], face: 'up', label: 'Cueille des baies', w: 5, ok: TERRACE_OK, act: 'berry' });
+// (l'arbre à baies a laissé la place au potager à baies : voir garden.js)
 // potager clôturé
 for (let y = 24; y < 26; y++) for (let x = 1; x < 6; x++) block(x, y);
 furniture.push({ k: py(25) + 14, draw(t) {
@@ -597,7 +591,7 @@ deco(21, 24, py(24) + 12, () => {
 }, true);
 [[20, 24, 'right'], [22, 25, 'left']].forEach(([x, y, f]) => IDLE_SEATS.push(seat([x, y], { pos: [px(x) + 8, py(y) + 12], k: py(y) + 12, face: f === 'right' ? 'down' : 'down', legs: 'sit', w: 6, ok: TERRACE_OK, label: 'Pique-nique dans le jardin', stand: [x, y + 1 < 27 ? y + 1 : y - 1] })));
 // réverbères
-[[7, 20], [19, 20]].forEach(([x, y]) => deco(x, y, py(y) + 14, t => {
+[[7, 20], [18, 20]].forEach(([x, y]) => deco(x, y, py(y) + 14, t => {
   const cx = px(x) + 8, by = py(y) + 14, night = skyState(Date.now()).kind !== 'day';
   R(cx - 4, by, 8, 2, SHADOW); R(cx - 3, by - 3, 6, 3, '#3a3040'); R(cx - 1, by - 26, 2, 24, '#3a3040'); R(cx, by - 26, 1, 24, '#5a5068');
   panel(cx - 4, by - 33, 8, 7, night ? '#ffe08a' : '#e8eef2'); R(cx - 5, by - 35, 10, 2, '#3a3040');

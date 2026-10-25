@@ -31,6 +31,7 @@ const BADGES = [
   ['kanto', 'Badge Kanto', 'Pokédex de Kanto complet', 'shield', '#e0533f', () => [regionCount(REGIONS[0]), 151], 15],
   ['sauvage', 'Badge Herbe Haute', 'Attrape un Pokémon sauvage dans les hautes herbes', 'leaf', '#6cc75a', () => [stv('wild'), 1], 2],
   ['chasseur', 'Badge Chasseur', '15 Pokémon sauvages attrapés', 'star', '#2e7d36', () => [stv('wild'), 15], 4],
+  ['mainverte', 'Badge Main Verte', 'Récolte 20 baies dans ton potager', 'leaf', '#8ad04a', () => [stv('harvest'), 20], 3],
   ['maitre', 'Badge Maître Pokémon', '500 Pokémon différents', 'trophy', '#ffd166', () => [caughtCount(), 500], 25]
 ];
 // défis du jour : [stat, objectif, intitulé, tickets]
@@ -39,7 +40,8 @@ const DAILY_POOL = [
   ['tools', 80, 'Tes agents font 80 actions', 2], ['tools', 200, 'Tes agents font 200 actions', 3],
   ['pulls', 3, 'Ouvre 3 Balls', 1], ['newmons', 2, 'Attrape 2 nouveaux Pokémon', 2],
   ['pets', 5, 'Fais 5 câlins aux chats ou aux Pokémon', 1], ['mails', 2, 'Tes agents s\'écrivent 2 messages', 2],
-  ['nights', 1, 'Une tâche terminée après 22 h', 2], ['wild', 1, 'Attrape un Pokémon sauvage dans les hautes herbes', 2]
+  ['nights', 1, 'Une tâche terminée après 22 h', 2], ['wild', 1, 'Attrape un Pokémon sauvage dans les hautes herbes', 2],
+  ['harvest', 5, 'Récolte 5 baies au potager', 2], ['water', 3, 'Arrose 3 fois ton potager', 1]
 ];
 
 /* ---------- stats ---------- */

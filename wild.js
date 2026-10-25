@@ -299,9 +299,9 @@ function drawMenu(now) {
     } else if (it && it.k === 'back') txt('Retour', 168, 140, '#484848', '#d0d0c8', 9, 'left', 700);
   } else if (m.kind === 'bag') {
     P(0, 112, GW, 48, '#283040'); rbox(1, 113, 158, 46, '#f8f8f8', '#706880'); rbox(161, 113, 78, 46, '#f8f8f8', '#706880');
-    m.cw = 74; m.items.forEach((it, i) => menuItem(i, it.label, 14 + (i % 2) * 74, 127 + (i >> 1) * 14, 7.5, it.dis));
+    m.cw = 74; m.items.forEach((it, i) => menuItem(i, it.label, 14 + (i % 2) * 74, 123 + (i >> 1) * 10.5, 7, it.dis));
     const it = m.items[m.cur];
-    txt('Pièces : ' + (DEX.coins || 0), 166, 124, '#484848', '#d0d0c8', 7.5, 'left', 700);
+    txt((m.pocket === 'berries' ? 'BAIES' : 'BALLS') + ' · ' + (DEX.coins || 0) + ' p.', 166, 124, '#484848', '#d0d0c8', 7.5, 'left', 700);
     if (it && it.info) {
       txt(it.info.price, 166, 136, '#3868b8', null, 7.5, 'left', 700);
       wrapText(it.info.desc, 68, 7).slice(0, 2).forEach((l, i) => txt(l, 166, 147 + i * 9, '#585858', null, 7, 'left', 600));
@@ -563,24 +563,51 @@ async function turn() {
     await sendOut(i, false);
     return attack(false, foeMove());
   }
-  // le sac : les Balls et la baie
-  const coins = DEX.coins || 0;
-  const BAG = [['poke', 'POKé BALL', 0, 1, 'Une Ball classique.'], ['super', 'SUPER BALL', 5, 1.5, 'Meilleur taux de capture.'], ['hyper', 'HYPER BALL', 12, 2, 'Très bon taux de capture.'],
-    ['master', 'MASTER BALL', 100, 255, 'Capture à coup sûr !'], ['berry', 'BAIE FRAMBY', 0, 0, 'Il sera plus facile à attraper.']];
-  const items = BAG.map(([k, l, p, b, d]) => ({ k, label: l, dis: k === 'berry' ? BT.berry : coins < p, info: { price: k === 'berry' ? (BT.berry ? 'Déjà donnée' : 'Une par combat') : p ? p + ' pièces' : 'Gratuite', desc: d } }));
-  items.push({ k: 'back', label: 'RETOUR' });
-  const k = await btChoose({ kind: 'bag', cols: 2, items, backKey: 'back' });
-  if (k === 'back') return '';
-  if (k === 'berry') {
-    BT.berry = true; await btSay('Vous donnez une BAIE FRAMBY à ' + BT.name + ' sauvage.');
-    await fxRun(500, p => { const x = lerp(70, 176, p), y = lerp(90, 52, p) - Math.sin(p * Math.PI) * 20; P(x - 2, y - 2, 5, 5, '#e04868'); P(x - 1, y - 3, 2, 1, '#48a838'); });
-    bs.mel([72, 76, 79], 0.06);
-    await btSay(BT.name + ' sauvage la mange. Il a l\'air plus calme !');
-    return attack(false, foeMove());
+  // le sac : deux poches, les Balls et les baies du potager
+  return bagMenu();
+}
+const BALL_BAG = [['poke', 'POKé BALL', 0, 1, 'Une Ball classique.'], ['super', 'SUPER BALL', 5, 1.5, 'Meilleur taux de capture.'],
+  ['hyper', 'HYPER BALL', 12, 2, 'Très bon taux de capture.'], ['master', 'MASTER BALL', 100, 255, 'Capture à coup sûr !']];
+async function bagMenu() {
+  for (;;) {
+    const coins = DEX.coins || 0, bag = typeof farmBag === 'function' ? farmBag() : {}, pocket = BT.pocket || 'balls';
+    let items;
+    if (pocket === 'balls') {
+      const nb = Object.values(bag).reduce((x, y) => x + y, 0);
+      items = BALL_BAG.map(([k, l, p, b, d]) => ({ k, label: l, dis: coins < p, info: { price: p ? p + ' pièces' : 'Gratuite', desc: d } }));
+      items.push({ k: 'pk-berries', label: 'BAIES ▶', info: { price: nb + ' baie' + (nb > 1 ? 's' : ''), desc: 'Les baies de ton potager.' } }, { k: 'back', label: 'RETOUR' });
+    } else {
+      items = Object.entries(BERRIES).map(([k, b]) => ({ k: 'b-' + k, label: b.name.toUpperCase().replace('BAIE ', 'B. '), dis: !(bag[k] > 0), info: { price: '×' + (bag[k] || 0), desc: b.desc } }));
+      items.push({ k: 'pk-balls', label: '◀ BALLS', info: { price: '', desc: 'Retour aux Balls.' } }, { k: 'back', label: 'RETOUR' });
+    }
+    const k = await btChoose({ kind: 'bag', cols: 2, items, backKey: 'back', pocket });
+    if (k === 'back') return '';
+    if (k === 'pk-berries' || k === 'pk-balls') { BT.pocket = k === 'pk-berries' ? 'berries' : 'balls'; continue; }
+    if (k.startsWith('b-')) return useBerry(k.slice(2));
+    const ball = BALL_BAG.find(x => x[0] === k);
+    if (ball[2]) { DEX.coins -= ball[2]; saveDex(); }
+    return (await throwBall(ball[0], ball[1], ball[3])) || attack(false, foeMove());
   }
-  const ball = BAG.find(b => b[0] === k);
-  if (ball[2]) { DEX.coins -= ball[2]; saveDex(); }
-  return (await throwBall(ball[0], ball[1], ball[3])) || attack(false, foeMove());
+}
+async function useBerry(k) {
+  if (!farmTake(k)) return '';
+  const m = BT.team[BT.cur], B = BERRIES[k], NAME = B.name.toUpperCase();
+  if (k === 'oran' || k === 'sitrus') {
+    await btSay(m.name + ' mange une ' + NAME + ' !');
+    const a = m.hp; m.hp = Math.min(m.max, m.hp + (k === 'oran' ? 10 : Math.ceil(m.max / 4)));
+    bs.mel([72, 76, 79, 84], 0.06);
+    fxRun(600, p => { for (let i = 0; i < 6; i++) { const q = (p + i / 6) % 1; P(48 + i * 6, 100 - q * 40, 2, 2, q < 0.5 ? '#a8f8c8' : '#ffffff'); } });
+    await tw(500, p => { BT.mhpS = lerp(a, m.hp, p); });
+    await btSay(m.hp > a ? m.name + ' récupère ' + (m.hp - a) + ' PV !' : 'Ses PV sont déjà au maximum…');
+  } else {
+    await btSay('Vous donnez une ' + NAME + ' à ' + BT.name + ' sauvage.');
+    await fxRun(500, p => { const x = lerp(70, 176, p), y = lerp(90, 52, p) - Math.sin(p * Math.PI) * 20; P(x - 2, y - 2, 5, 5, B.c); P(x - 1, y - 3, 2, 1, '#48a838'); P(x - 1, y - 1, 1, 1, '#ffffff'); });
+    bs.mel([72, 76, 79], 0.06);
+    if (k === 'framby' || k === 'dore') { BT.capMul = Math.max(BT.capMul || 1, k === 'dore' ? 2.5 : 1.5); await btSay(BT.name + ' sauvage la mange. Il a l\'air ' + (k === 'dore' ? 'beaucoup ' : '') + 'plus facile à attraper !'); }
+    else if (k === 'nanab') { BT.noFlee = true; await btSay(BT.name + ' sauvage la mange et se calme. Il ne s\'enfuira plus !'); }
+    else if (k === 'nanana') { BT.double = true; await btSay(BT.name + ' sauvage la mange, ravi ! Les pièces et l\'EXP. de ce combat seront doublées.'); }
+  }
+  return attack(false, foeMove());
 }
 function partyPick(canBack) {
   const items = BT.team.map((t, i) => ({ k: 'm' + i, label: t.name, dis: t.hp <= 0 || i === BT.cur }));
@@ -616,8 +643,8 @@ async function foeFaint() {
   await btSay(BT.name + ' sauvage est K.O. !');
   stopMusic(); bs.mel([67, 72, 76, 72, 79, 0, 84], 0.1);
   await gainXp();
-  DEX.coins = (DEX.coins || 0) + 2; saveDex();
-  await btSay('Vous ramassez 2 pièces. Astuce : pour capturer un Pokémon, affaiblis-le sans le mettre K.O. !');
+  const gain = BT.double ? 4 : 2; DEX.coins = (DEX.coins || 0) + gain; saveDex();
+  await btSay('Vous ramassez ' + gain + ' pièces. Astuce : pour capturer un Pokémon, affaiblis-le sans le mettre K.O. !');
   return 'ko';
 }
 async function meFaint() {
@@ -638,7 +665,7 @@ async function meFaint() {
 async function gainXp() {
   const m = BT.team[BT.cur]; if (m.hp <= 0) return;
   DEX.xp = DEX.xp || {}; DEX.lv = DEX.lv || {};
-  let left = Math.max(1, Math.round(BT.lvl * XPT[BT.tier] * 1.4));
+  let left = Math.max(1, Math.round(BT.lvl * XPT[BT.tier] * 1.4)) * (BT.double ? 2 : 1);
   await btSay(m.name + ' gagne ' + left + ' points EXP. !');
   while (left > 0 && m.L < 100) {
     const need = xpNeed(m.L), have = DEX.xp[m.id] || 0, take = Math.min(left, need - have), r0 = have / need;
@@ -659,7 +686,7 @@ async function gainXp() {
 function catchRoll(bonus) {
   if (bonus >= 255) return 4;
   const M = BT.fmax, H = Math.max(1, BT.fhp), rate = CAPTURE[BT.id - 1];
-  const a = (3 * M - 2 * H) * rate * bonus * (BT.berry ? 1.5 : 1) / (3 * M);
+  const a = (3 * M - 2 * H) * rate * bonus * (BT.capMul || 1) / (3 * M);
   if (a >= 255) return 4;
   const b = 1048560 / Math.sqrt(Math.sqrt(16711680 / a));
   let n = 0; while (n < 4 && Math.random() * 65536 < b) n++;
@@ -697,7 +724,7 @@ async function throwBall(kind, label, bonus) {
     await btSay('Et hop ! ' + BT.name + ' est attrapé !', 3000);
     await gainXp();
     if (res.isNew) await btSay('Les données de ' + BT.name + ' ont été ajoutées au POKéDEX.');
-    else await btSay('Vous l\'aviez déjà : +' + res.coins + ' pièces.');
+    else { if (BT.double) { DEX.coins += res.coins; saveDex(); } await btSay('Vous l\'aviez déjà : +' + res.coins * (BT.double ? 2 : 1) + ' pièces.'); }
     if (BT.shiny) await btSay('Un POKéMON chromatique ! +20 pièces.');
     if (DEX.team.length > wasTeam) await btSay(BT.name + ' rejoint ton jardin !');
     news('🌿', dexName(BT.id) + ' sauvage attrapé dans les hautes herbes !' + (res.isNew ? ' Nouveau !' : ''), 'party');
@@ -711,7 +738,7 @@ async function throwBall(kind, label, bonus) {
   BT.ball = null;
   await tw(260, p => { BT.foe.white = 1 - p; }); BT.foe.tint = null;
   await btSay(['Oh non ! Le POKéMON s\'est libéré !', 'Raaah ! Ça y était presque !', 'Aaaaah ! Presque !', 'Mince ! Ça y était presque !'][shakes]);
-  if (Math.random() < WILD_FLEE[BT.tier]) {
+  if (!BT.noFlee && Math.random() < WILD_FLEE[BT.tier]) {
     bs.noise(0.3, 0.05, 0, 2500);
     await tw(420, p => { BT.foe.dx = 90 * p; BT.foe.alpha = 1 - p; }); BT.foe.show = false;
     await tw(250, p => { BT.boxF.dx = -130 * p; });

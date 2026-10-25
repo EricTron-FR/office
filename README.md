@@ -26,6 +26,7 @@ Le serveur lit `~/.claude/projects` sans rien y modifier. Il diffuse l'activité
 - **Pokédex** : par région, avec le nombre attrapé dans chacune.
 - **Jardin** : jusqu'à 6 Pokémon. Ceux d'eau nagent dans la mare et en sortent parfois. Ils jouent avec les agents et les chats.
 - **Pokémon sauvages** 🌿 : environ toutes les 10 minutes, ça bouge dans les hautes herbes du jardin. Clique dessus pour lancer un combat façon Rouge Feu : attaque pour affaiblir le Pokémon sans le mettre K.O., donne-lui une baie, puis lance une Ball (Poké Ball gratuite ; Super, Hyper et Master Ball contre des pièces). La capture suit la vraie formule des jeux.
+- **Potager à baies** 🌱 : à la place de l'arbre à baies, 4 parcelles (jusqu'à 9, achetées avec des pièces). Plante des graines (Oran, Framby, Nanab, Sitrus, Nanana), arrose en cliquant : la vraie pluie de Lyon, tes agents jardiniers et tes Pokémon Eau arrosent aussi. Ça pousse en temps réel, même appli fermée, mais seulement quand la terre est humide. Les baies récoltées servent en combat (SAC → BAIES) : soin, capture facilitée, Pokémon qui ne fuit plus, gains doublés. Rare : la Framby dorée.
 - **Mon jardin** : recherche par nom ou numéro, filtres par région, rareté et type, et tri par date de capture, numéro, nom, rareté ou nombre d'exemplaires.
 - **Badges & défis** : 20 badges façon arène, débloqués par le travail de tes agents (tâches, actions, nuits, travail en équipe) et par ta collection. Trois défis du jour, plus un bonus si tu fais les trois.
 
@@ -52,7 +53,8 @@ La progression est gardée dans le navigateur (localStorage). Les données des P
 | `dex.js` | Pokédex : tickets, roue, rafales, régions, pièces, boutique, collection, jardin |
 | `gacha.js` | animations d'ouverture de Ball, de rafale et célébrations |
 | `badges.js` | badges et défis du jour |
-| `wild.js` | Pokémon sauvages des hautes herbes : combat et capture |
+| `wild.js` | Pokémon sauvages des hautes herbes : combat GBA et capture |
+| `garden.js` | potager à baies : parcelles, pousse, arrosage, récolte |
 | `tiles.js` | tuiles libres de droits (herbe, chemin, sapins, haie, parquet, tapis) |
 | `assets/` | les deux tilesets et leurs crédits |
 | `talk.js` | bulles manga et conversations entre agents |
