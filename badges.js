@@ -41,8 +41,7 @@ const DAILY_POOL = [
   ['tools', 80, 'Tes agents font 80 actions', 2], ['tools', 200, 'Tes agents font 200 actions', 3],
   ['pulls', 3, 'Ouvre 3 Balls', 1], ['newmons', 2, 'Attrape 2 nouveaux Pokémon', 2],
   ['pets', 5, 'Fais 5 câlins aux chats ou aux Pokémon', 1], ['mails', 2, 'Tes agents s\'écrivent 2 messages', 2],
-  ['nights', 1, 'Une tâche terminée après 22 h', 2], ['wild', 1, 'Attrape un Pokémon sauvage dans les hautes herbes', 2],
-  ['harvest', 5, 'Récolte 5 baies au potager', 2], ['water', 3, 'Arrose 3 fois ton potager', 1]
+  ['nights', 1, 'Une tâche terminée après 22 h', 2], ['harvest', 5, 'Récolte 5 baies au potager', 2], ['water', 3, 'Arrose 3 fois ton potager', 1]
 ];
 
 /* ---------- stats ---------- */

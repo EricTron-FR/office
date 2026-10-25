@@ -6,6 +6,8 @@
    Attaque pour l'affaiblir (sans le mettre K.O. !), donne-lui une baie, lance une Ball.
    La capture suit la vraie formule des jeux (taux de capture, PV restants, bonus de la Ball, secousses).
    ==================================================================== */
+// combats en pause : plus d'apparition automatique (wildSpawn(id) dans la console pour tester). Remettre true pour les réactiver.
+const WILD_ON = false;
 const WILD_EVERY = 10 * 60e3, WILD_STAY = 4 * 60e3;
 const WILD = { id: 0, cell: null, until: 0, next: performance.now() + 2 * 60e3, shiny: false, lvl: 5 };
 const WILD_TIER_W = { commun: 50, peu: 30, rare: 14, epique: 5, legendaire: 1 };
@@ -37,6 +39,7 @@ function wildGone() { WILD.id = 0; WILD.cell = null; WILD.next = performance.now
 HOOKS.update.push((dt, now) => {
   if (BT) return;
   if (WILD.id && now > WILD.until) { news('🍃', 'Le Pokémon des hautes herbes est reparti…'); wildGone(); return; }
+  if (!WILD_ON) return;
   if (!WILD.id && now > WILD.next) { if (DEX.starter) wildSpawn(); else WILD.next = now + 60e3; }
 });
 
