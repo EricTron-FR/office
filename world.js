@@ -1302,7 +1302,7 @@ function drawCat(c, t) {
   R(x - 7, y - 1, 14, 2, 'rgba(40,25,10,.2)');
   if (c.mode === 'sleep') {                                    // en boule, qui respire
     const breath = (t * 0.6) % 1 < 0.5 ? 0 : 1, rows = CAT_SPR.sleep.slice();
-    if (breath) rows.splice(1, 0, rows[2]);
+    if (breath) { rows[1] = '...OOOOOOOIOOIO'; rows[2] = '..ObbbSbSObbbbO'; }      // le dos se soulève d'un pixel, sans changer la taille du sprite
     drawSprite(rows, x, y, pal, flip);
     const hx = flip ? x - 6 : x + 4, hy = y - rows.length;
     const p = (t * 0.4 + (c.big ? 0.5 : 0)) % 1;                 // petits z
