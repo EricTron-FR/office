@@ -202,7 +202,7 @@ ZONE_SEATS.library.forEach((s, i) => furniture.push({ k: s.k - 1, draw() {   // 
 furniture.push({ k: py(25) + 2, draw() {             // grande table avec lampes de banquier
   const x0 = px(33) + 2, y0 = py(24) + 4;
   R(x0, y0 + 14, 60, 2, SHADOW);
-  panel(x0, y0, 60, 8, '#8a5236'); panel(x0, y0 + 8, 60, 5, '#6a3a24');
+  woodPlank(x0, y0, 60, 8, true, DARKWOOD); R(x0 - 1, y0 + 8, 62, 6, FOUT); R(x0, y0 + 8, 60, 5, DARKWOOD.dk); R(x0, y0 + 8, 60, 1, DARKWOOD.xd);
   [[10], [44]].forEach(([dx]) => { R(x0 + dx + 2, y0 - 6, 1, 6, '#c9952f'); panel(x0 + dx, y0 - 9, 7, 3, '#3f9a5a'); });
   panel(x0 + 22, y0 + 2, 8, 4, '#ffffff'); R(x0 + 26, y0 + 2, 1, 4, '#c9c2b4'); panel(x0 + 34, y0 + 1, 5, 5, '#4f86d6');
 } });
@@ -363,7 +363,7 @@ HOOKS.post.push(t => {
 const deco = (tx, ty, k, draw, solid) => { if (solid !== false) block(tx, ty); furniture.push({ k: k != null ? k : py(ty + 1), draw }); };
 const near = (cell) => everyone().some(a => !a.path.length && !a.heading && Math.abs(a.x - cell[0] - 0.5) < 0.6 && Math.abs(a.y - cell[1] - 0.5) < 0.6);
 const pot = (cx, by, big) => {
-  panel(cx - (big ? 5 : 4), by - (big ? 9 : 7), big ? 10 : 8, big ? 9 : 7, '#c8603a'); R(cx - (big ? 5 : 4), by - (big ? 9 : 7), big ? 10 : 8, 2, '#e07a50');
+  terraPot(cx, by, big ? 10 : 8, big ? 9 : 7);
   leaves(cx, by - (big ? 9 : 7), big
     ? [[-7, -14, 4, 12, '#5d7745'], [3, -16, 4, 14, '#5d7745'], [-3, -24, 3, 22, '#6f8a52'], [1, -20, 3, 18, '#7f9c5f'], [-9, -7, 5, 4, '#6f8a52']]
     : [[-6, -6, 3, 6, '#6f8a52'], [-2, -11, 3, 11, '#7f9c5f'], [3, -7, 3, 7, '#86a566']]);

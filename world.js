@@ -86,12 +86,21 @@ function panel(x, y, w, h, c, o) {
 }
 // bois veiné, façon tileset intérieur (Bonsaiheldin)
 const WOOD = { hi: '#d4aa78', lt: '#b98d61', md: '#9a7148', dk: '#76522f', xd: '#583b21' };
-function woodPlank(x, y, w, h, vertical) {
-  R(x - 1, y - 1, w + 2, h + 2, FOUT); R(x, y, w, h, WOOD.md);
-  if (vertical) for (let i = 5; i < w - 2; i += 6) { R(x + i, y + 1, 1, h - 2, WOOD.dk); R(x + i + 1, y + 1, 1, h - 2, WOOD.lt); }
-  else for (let j = 3; j < h - 1; j += 4) R(x + 1, y + j, w - 2, 1, WOOD.dk);
-  for (let k = 0; k < Math.max(1, Math.floor(w * h / 50)); k++) { const s = hash('w' + x + ',' + y + ',' + k); R(x + 1 + s % Math.max(1, w - 4), y + 1 + (s >>> 6) % Math.max(1, h - 2), 2, 1, WOOD.lt); }
-  R(x, y, w, 1, WOOD.hi); R(x, y + h - 1, w, 1, WOOD.dk); R(x + w - 1, y, 1, h, WOOD.dk);
+const DARKWOOD = { hi: '#a8785a', lt: '#86583c', md: '#6a432c', dk: '#50301f', xd: '#3a2014' };
+function woodPlank(x, y, w, h, vertical, P) {
+  P = P || WOOD;
+  R(x - 1, y - 1, w + 2, h + 2, FOUT); R(x, y, w, h, P.md);
+  if (vertical) for (let i = 5; i < w - 2; i += 6) { R(x + i, y + 1, 1, h - 2, P.dk); R(x + i + 1, y + 1, 1, h - 2, P.lt); }
+  else for (let j = 3; j < h - 1; j += 4) R(x + 1, y + j, w - 2, 1, P.dk);
+  for (let k = 0; k < Math.max(1, Math.floor(w * h / 50)); k++) { const s = hash('w' + x + ',' + y + ',' + k); R(x + 1 + s % Math.max(1, w - 4), y + 1 + (s >>> 6) % Math.max(1, h - 2), 2, 1, P.lt); }
+  R(x, y, w, 1, P.hi); R(x, y + h - 1, w, 1, P.dk); R(x + w - 1, y, 1, h, P.dk);
+}
+// pot en terre cuite avec rebord, comme les vases du tileset ; by = bas du pot
+function terraPot(cx, by, w, h, c) {
+  c = c || '#c8683e'; const x = cx - (w >> 1), y = by - h;
+  R(x - 1, y + 1, w + 2, h, FOUT); R(x, y + 2, w, h - 2, c);
+  R(x + 1, y + 3, 1, h - 4, shade(c, 0.22)); R(x + w - 2, y + 3, 2, h - 4, shade(c, -0.22)); R(x, by - 1, w, 1, shade(c, -0.35));
+  R(x - 2, y - 1, w + 4, 4, FOUT); R(x - 1, y, w + 2, 2, shade(c, 0.12)); R(x - 1, y, w + 2, 1, shade(c, 0.32));
 }
 // même chose aux coins arrondis (feuillages, coussins, buissons)
 function blob(x, y, w, h, c, o) {
@@ -489,11 +498,11 @@ DESKS.forEach(d => {
       const deco = a ? a.lookHash % 7 : (d.i % 2 ? 0 : 1), dx2 = x0 + 23;
       if (deco === 6) pokeball(dx2 + 2, y0 + 2, false);                 // Pokéball
       if (deco === 0) { panel(dx2 - 1, y0 + 1, 6, 5, '#ffffff'); R(dx2, y0 + 2, 4, 1, '#c9c2b4'); R(dx2, y0 + 4, 3, 1, '#c9c2b4'); }
-      else if (deco === 1) { panel(dx2, y0 + 1, 5, 5, '#c0704f'); leaves(dx2 + 2, y0, [[-3, -5, 2, 5, '#6f8a52'], [0, -7, 2, 7, '#7f9c5f'], [2, -4, 2, 4, '#86a566']]); }
+      else if (deco === 1) { terraPot(dx2 + 2, y0 + 6, 5, 5); leaves(dx2 + 2, y0, [[-3, -5, 2, 5, '#6f8a52'], [0, -7, 2, 7, '#7f9c5f'], [2, -4, 2, 4, '#86a566']]); }
       else if (deco === 2) { panel(dx2 + 1, y0 - 3, 3, 3, CLAY); panel(dx2, y0, 5, 4, CLAY2); R(dx2 + 1, y0 - 2, 1, 1, OUT); R(dx2 + 3, y0 - 2, 1, 1, OUT); }   // figurine
       else if (deco === 3) { panel(dx2, y0 + 1, 5, 4, AMBER); panel(dx2 + 3, y0 - 2, 3, 3, AMBER); R(dx2 + 6, y0 - 1, 1, 1, '#e07a2a'); R(dx2 + 4, y0 - 1, 1, 1, OUT); } // canard
       else if (deco === 4) { panel(dx2, y0 - 3, 5, 7, '#6e4c38'); R(dx2 + 1, y0 - 2, 3, 5, '#9cc6e6'); R(dx2 + 1, y0 + 1, 3, 2, GREEN); }  // photo
-      else if (deco === 5) { panel(dx2 + 1, y0 + 2, 4, 4, '#c0704f'); panel(dx2 + 2, y0 - 4, 2, 6, '#5d9a5f', '#3d4a2c'); R(dx2 + 1, y0 - 2, 1, 2, '#5d9a5f'); R(dx2 + 2, y0 - 5, 1, 1, '#e8a0c0'); } // cactus
+      else if (deco === 5) { terraPot(dx2 + 3, y0 + 6, 4, 4); panel(dx2 + 2, y0 - 4, 2, 6, '#5d9a5f', '#3d4a2c'); R(dx2 + 1, y0 - 2, 1, 2, '#5d9a5f'); R(dx2 + 2, y0 - 5, 1, 1, '#e8a0c0'); } // cactus
       // portable : dos de l'écran, le logo étincelle s'allume selon l'activité
       panel(cx - 7, y0 + 3, 14, 3, '#cfcac0');
       if (seated) {
@@ -520,24 +529,24 @@ DESKS.forEach(d => {
 furniture.push({
   k: py(3) + 8, draw() {
     const x0 = px(13) + 1, top = py(3) - 26, bot = py(3) + 8;
-    panel(x0, top, 30, bot - top, '#a87b55'); R(x0, top, 30, 1, '#c39a72');
+    R(x0 - 1, top - 1, 32, bot - top + 2, FOUT); R(x0, top, 30, bot - top, WOOD.md); R(x0, top, 30, 2, WOOD.hi); R(x0 + 28, top + 2, 2, bot - top - 2, WOOD.dk); R(x0, top + 2, 1, bot - top - 2, WOOD.lt);
     seed = 7;
     for (let s = 0; s < 3; s++) {
       const iy = top + 3 + s * 10;
-      R(x0 + 2, iy, 26, 8, '#5e4430');
+      R(x0 + 2, iy, 26, 8, WOOD.xd); R(x0 + 2, iy, 26, 1, '#3a2414');
       for (let x = x0 + 3; x < x0 + 26;) {
-        const bw = 2 + Math.floor(rnd() * 2), bh = 5 + Math.floor(rnd() * 3);
-        R(x, iy + 8 - bh, bw, bh, [CLAY, BLUE, GREEN, AMBER, CREAM, '#8c6c9e', '#3a3835'][Math.floor(rnd() * 7)]);
+        const bw = 2 + Math.floor(rnd() * 2), bh = 5 + Math.floor(rnd() * 3), c = ['#c8583e', '#4f7ab8', '#5a9a4a', '#d8a83a', '#efe2c4', '#8a5ab0', '#5a4a3a'][Math.floor(rnd() * 7)];
+        R(x, iy + 8 - bh, bw, bh, c); R(x, iy + 8 - bh, 1, bh, shade(c, 0.25)); R(x, iy + 9 - bh, bw, 1, shade(c, -0.25));
         x += bw + (rnd() < 0.15 ? 2 : 0);
       }
-      R(x0 + 1, iy + 8, 28, 2, '#c39a72');
+      R(x0 + 1, iy + 8, 28, 2, WOOD.lt); R(x0 + 1, iy + 9, 28, 1, WOOD.dk);
     }
   }
 });
 furniture.push({
   k: py(3) + 9, draw() {
     const cx = px(15) + 8, by = py(3) + 9;
-    panel(cx - 5, by - 9, 10, 9, '#c0704f'); R(cx - 5, by - 9, 10, 2, '#d68a68');
+    terraPot(cx, by, 10, 9);
     leaves(cx, by - 9, [[-8, -12, 4, 10, '#5d7745'], [4, -14, 4, 12, '#5d7745'], [-4, -24, 3, 22, '#6f8a52'], [1, -27, 3, 25, '#7f9c5f'],
       [-1, -18, 3, 16, '#86a566'], [-10, -6, 5, 4, '#6f8a52'], [5, -7, 5, 4, '#7f9c5f']]);
   }
@@ -572,9 +581,9 @@ furniture.push({   // grand bureau en bois sombre avec liseré doré
     const x0 = px(-6) + 1, w = 46, y0 = py(7) + 1, cx = px(-4.5);
     const seated = owner.mode === 'sit' && owner.seat && owner.seat.ceo;
     R(x0, py(8) + 2, w + 1, 2, SHADOW);
-    panel(x0, y0, w, 8, '#7a4e36'); R(x0, y0, w, 1, '#9a6a4c');
-    panel(x0, y0 + 8, w, 9, '#5e3a28'); R(x0, y0 + 8, w, 1, AMBER);
-    panel(x0 + 3, y0 + 10, 10, 5, '#6e4632'); panel(x0 + w - 13, y0 + 10, 10, 5, '#6e4632');
+    woodPlank(x0, y0, w, 8, true, DARKWOOD);
+    R(x0 - 1, y0 + 8, w + 2, 10, FOUT); R(x0, y0 + 8, w, 9, DARKWOOD.dk); R(x0, y0 + 8, w, 1, '#c9952f');
+    [x0 + 3, x0 + w - 13].forEach(dx => { R(dx, y0 + 10, 10, 5, DARKWOOD.md); R(dx, y0 + 10, 10, 1, DARKWOOD.lt); R(dx + 4, y0 + 12, 2, 1, '#e8c060'); });
     const nw = OWNER.length * 4 + 5;                                          // plaque nominative
     R(cx - (nw >> 1) - 1, y0 + 9, nw + 2, 7, '#c9952f'); R(cx - (nw >> 1), y0 + 10, nw, 5, '#2a2622');
     pixText(OWNER, cx - (nw >> 1) + 3, y0 + 10, AMBER);
@@ -612,14 +621,14 @@ furniture.push({   // vitrine à trophées
 furniture.push({   // plante de coin
   k: py(3) + 9, draw() {
     const cx = px(-8) + 8, by = py(3) + 9;
-    panel(cx - 5, by - 9, 10, 9, '#2a2622'); R(cx - 5, by - 9, 10, 1, AMBER);
+    terraPot(cx, by, 10, 9, '#3a3236'); R(cx - 5, by - 7, 10, 1, '#c9952f');
     leaves(cx, by - 9, [[-7, -14, 4, 12, '#5d7745'], [3, -16, 4, 14, '#5d7745'], [-3, -26, 3, 24, '#6f8a52'], [1, -22, 3, 20, '#7f9c5f'], [-9, -7, 5, 4, '#6f8a52']]);
   }
 });
 furniture.push({   // aquarium
   k: py(12) + 2, draw(t) {
     const x0 = px(-8) + 2, y0 = py(11) - 10;
-    panel(x0, y0 + 14, 28, 10, '#5e3a28');
+    woodPlank(x0, y0 + 14, 28, 10, false, DARKWOOD);
     panel(x0, y0, 28, 14, '#5aa3c9'); R(x0, y0, 28, 2, '#8cc4e0'); R(x0, y0 + 12, 28, 2, '#d8c79c');
     leaves(x0 + 5, y0 + 12, [[0, -6, 1, 6, '#4f8a52'], [2, -8, 1, 8, '#5d9a5f']]);
     [[0, CLAY], [1, AMBER], [2, '#ffffff']].forEach(([i, c]) => {
@@ -634,7 +643,9 @@ furniture.push({   // aquarium
   k: py(10) + 12, draw() {
     const cx = px(tx) + 8, by = py(10) + 12;
     R(cx - 7, by, 14, 2, SHADOW);
-    panel(cx - 6, by - 6, 12, 6, '#6e4632'); panel(cx - 7, by - 14, 14, 9, CLAY); R(cx - 7, by - 14, 14, 1, '#eb9a7c');
+    R(cx - 8, by - 15, 16, 16, FOUT); R(cx - 7, by - 14, 14, 15, WOOD.md); R(cx - 7, by - 14, 14, 1, WOOD.hi);
+    R(cx - 5, by - 12, 10, 7, '#c8583e'); R(cx - 5, by - 12, 10, 1, '#e88a66'); R(cx - 5, by - 6, 10, 1, '#9a3a26');
+    R(cx - 7, by - 3, 14, 3, WOOD.dk);
   }
 }));
 furniture.push({   // lampadaire
@@ -647,7 +658,7 @@ furniture.push({   // lampadaire
 [[0, 13], [21, 13], [23, 13], [31, 13]].forEach(([tx, ty]) => furniture.push({
   k: py(ty) + 14, draw() {
     const cx = px(tx) + 8, by = py(ty) + 14;
-    panel(cx - 4, by - 7, 8, 7, '#c0704f');
+    terraPot(cx, by, 8, 7);
     leaves(cx, by - 7, [[-6, -6, 3, 6, '#6f8a52'], [-2, -11, 3, 11, '#7f9c5f'], [3, -7, 3, 7, '#86a566']]);
   }
 }));
@@ -697,7 +708,7 @@ furniture.push({
     if (someone(a => !a.path.length && Math.floor(a.x) === 25 && Math.floor(a.y) === 4))
       for (let i = 0; i < 3; i++) { const ph = (t * 1.3 + i / 3) % 1; R(mx + 5 + Math.round(Math.sin(ph * 7 + i)), ct - 6 - Math.round(ph * 10), 1, 1, 'rgba(255,255,255,' + (0.9 - ph * 0.9).toFixed(2) + ')'); }
     [[CLAY, 0], [BLUE, 5]].forEach(([c, o]) => panel(px(24) + 4 + o, ct - 4, 3, 4, c));
-    panel(px(26) + 4, ct - 5, 7, 5, '#c0704f');
+    terraPot(px(26) + 7, ct, 7, 5);
     leaves(px(26) + 7, ct - 5, [[-5, -7, 3, 7, '#6f8a52'], [-1, -10, 3, 10, '#7f9c5f'], [3, -6, 3, 6, '#86a566']]);
     // frigo américain deux portes
     const fx = px(27) + 2, fw = 28, ft = OYp + 12, fb = py(4) + 1;
@@ -715,9 +726,10 @@ furniture.push({ // distributeur de snacks, même gabarit que le frigo
   k: py(4) + 1, draw(t) {
     const x0 = px(30) + 2, w = 28, top = OYp + 12, bot = py(4) + 1;
     R(x0, bot, w + 1, 2, SHADOW);
-    panel(x0, top, w, bot - top, '#e6dfd2'); R(x0, top, w, 5, CLAY); R(x0, top + 5, w, 1, CLAY2);
-    spark(x0 + 9, top + 2, 1, CREAM);
-    R(x0 + 2, top + 8, 17, 24, '#2a2622');
+    R(x0 - 1, top - 1, w + 2, bot - top + 2, FOUT); R(x0, top, w, bot - top, '#efe6d4'); R(x0 + w - 2, top, 2, bot - top, '#d2c4aa'); R(x0 + 1, top + 6, 1, bot - top - 8, '#fffaf0');
+    R(x0, top, w, 6, '#d0503a'); R(x0, top, w, 1, '#ec7a5a'); R(x0, top + 5, w, 1, '#a03828');
+    spark(x0 + 9, top + 3, 1, CREAM);
+    R(x0 + 1, top + 7, 19, 26, FOUT); R(x0 + 2, top + 8, 17, 24, '#2e2a30');
     const SN = [AMBER, BLUE, GREEN, CREAM, '#c25b6a', VIOLET, CLAY, '#9cc6e6', AMBER];
     for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { R(x0 + 4 + c * 5, top + 10 + r * 8, 4, 4, SN[r * 3 + c]); R(x0 + 3 + c * 5, top + 15 + r * 8, 6, 1, '#55524c'); }
     R(x0 + 2, top + 8, 1, 24, 'rgba(255,255,255,.3)');
@@ -766,7 +778,7 @@ furniture.push({ // télé face au canapé (on voit son dos, l'écran éclaire l
       g.fillStyle = [BLUE, VIOLET, CLAY, GREEN][Math.floor(t * 0.8) % 4];
       g.globalAlpha = 0.16 + (Math.floor(t * 5) % 2) * 0.04; g.fillRect(x0 - 4, y0 - 22, w + 8, 18); g.globalAlpha = 1;
     }
-    panel(x0, y0 + 2, w, 8, '#5e3a28'); R(x0, y0 + 2, w, 1, '#7a4e36');
+    woodPlank(x0, y0 + 2, w, 8, false, DARKWOOD);
     R(x0 + 3, y0 + 5, 9, 3, '#4a2e22'); R(x0 + 18, y0 + 5, 9, 3, '#4a2e22');
     panel(x0 + 3, y0 - 9, w - 6, 10, '#2b2a28'); R(x0 + 3, y0 - 9, w - 6, 1, '#45433f');
     spark(x0 + 15, y0 - 4, 1, on ? CREAM : '#55524c');
@@ -803,11 +815,11 @@ furniture.push({ // table basse
   k: py(13) - 2, draw() {
     const x0 = px(26) + 3, y0 = py(12) + 1;
     R(x0, y0 + 12, 27, 2, SHADOW);
-    panel(x0, y0, 26, 8, '#e0bf95'); R(x0, y0, 26, 1, '#efd5b0');
+    woodPlank(x0, y0, 26, 8, true);
     panel(x0, y0 + 8, 26, 3, '#b98f63');
     panel(x0 + 3, y0 + 2, 7, 4, CLAY); R(x0 + 4, y0 + 3, 5, 2, '#f5efe3');
     panel(x0 + 14, y0 + 2, 3, 4, CREAM);
-    panel(x0 + 20, y0 + 2, 4, 4, '#c0704f'); leaves(x0 + 22, y0 + 2, [[-2, -4, 2, 4, '#7f9c5f'], [1, -3, 2, 3, '#86a566']]);
+    terraPot(x0 + 22, y0 + 6, 4, 4); leaves(x0 + 22, y0 + 2, [[-2, -4, 2, 4, '#7f9c5f'], [1, -3, 2, 3, '#86a566']]);
   }
 });
 furniture.push({ // pouf
