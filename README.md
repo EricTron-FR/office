@@ -25,6 +25,8 @@ Le serveur lit `~/.claude/projects` sans rien y modifier. Il diffuse l'activité
 - **Pièces** 🪙 : les doublons en rapportent selon leur rareté (commun 2, peu commun 3, rare 5, épique 15, légendaire 40). À la boutique, on les échange contre un ticket (10), une Super Ball (15), une Hyper Ball (40) ou une Master Ball (150).
 - **Pokédex** : par région, avec le nombre attrapé dans chacune.
 - **Jardin** : jusqu'à 6 Pokémon. Ceux d'eau nagent dans la mare et en sortent parfois. Ils jouent avec les agents et les chats.
+- **Pokémon sauvages** 🌿 : environ toutes les 10 minutes, ça bouge dans les hautes herbes du jardin. Clique dessus pour lancer un combat façon Rouge Feu : attaque pour affaiblir le Pokémon sans le mettre K.O., donne-lui une baie, puis lance une Ball (Poké Ball gratuite ; Super, Hyper et Master Ball contre des pièces). La capture suit la vraie formule des jeux.
+- **Mon jardin** : recherche par nom ou numéro, filtres par région, rareté et type, et tri par date de capture, numéro, nom, rareté ou nombre d'exemplaires.
 - **Badges & défis** : 20 badges façon arène, débloqués par le travail de tes agents (tâches, actions, nuits, travail en équipe) et par ta collection. Trois défis du jour, plus un bonus si tu fais les trois.
 
 Dans le jardin, les Pokémon sont animés (marche sur 8 directions, repos, sommeil, saut) grâce aux sprites du projet communautaire [PMD SpriteCollab](https://github.com/PMDCollab/SpriteCollab) (licence CC BY-NC 4.0, usage non commercial). Les icônes et grands sprites viennent de [PokeAPI](https://github.com/PokeAPI/sprites).
@@ -50,6 +52,7 @@ La progression est gardée dans le navigateur (localStorage). Les données des P
 | `dex.js` | Pokédex : tickets, roue, rafales, régions, pièces, boutique, collection, jardin |
 | `gacha.js` | animations d'ouverture de Ball, de rafale et célébrations |
 | `badges.js` | badges et défis du jour |
+| `wild.js` | Pokémon sauvages des hautes herbes : combat et capture |
 | `tiles.js` | tuiles libres de droits (herbe, chemin, sapins, haie, parquet, tapis) |
 | `assets/` | les deux tilesets et leurs crédits |
 | `talk.js` | bulles manga et conversations entre agents |
