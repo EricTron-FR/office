@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Eric Office</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%277.5%27 fill=%27%232a2636%27/%3E%3Cpath d=%27M1.5 7.2a6.5 6.5 0 0 1 13 0z%27 fill=%27%23e0533f%27/%3E%3Cpath d=%27M1.5 8.8a6.5 6.5 0 0 0 13 0z%27 fill=%27%23fff%27/%3E%3Ccircle cx=%278%27 cy=%278%27 r=%272.2%27 fill=%27%23fff%27 stroke=%27%232a2636%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
 <style>
@@ -206,6 +207,64 @@ img.nf{visibility:hidden}
 .dx-pick button img{width:40px;height:30px;image-rendering:pixelated}
 .dx-pick button.in{background:#d8f2d0}
 @media (max-width:700px){.dx-team{grid-template-columns:repeat(3,1fr)}}
+/* le spectacle d'ouverture de Ball */
+#gacha{position:fixed;inset:0;z-index:40;overflow:hidden;background:radial-gradient(circle at 50% 50%,#3a2f58 0,#15101f 70%);font-family:var(--pix);color:#fff}
+#gacha[hidden]{display:none}
+#gacha.t-legendaire{background:radial-gradient(circle at 50% 50%,#5a3f18 0,#160e05 72%)}
+#gacha.t-epique{background:radial-gradient(circle at 50% 50%,#4a2a6a 0,#140b20 72%)}
+.g-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.g-rays{position:absolute;left:50%;top:50%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;opacity:0;z-index:0;
+  background:repeating-conic-gradient(from 0deg,var(--tc,#fff) 0deg 7deg,transparent 7deg 22deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 42%);mask:radial-gradient(circle,#000 0,transparent 42%);transition:opacity .4s}
+.g-rays.on{opacity:.55;animation:rays 9s linear infinite}
+.t-legendaire .g-rays.on{opacity:.8;animation-duration:4s}
+@keyframes rays{to{transform:rotate(360deg)}}
+.g-stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
+.g-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+.g-flash.go{animation:flash .9s ease-out}
+@keyframes flash{0%{opacity:0}8%{opacity:1}100%{opacity:0}}
+.g-skip{position:absolute;right:18px;bottom:18px;z-index:5;background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.5);box-shadow:none}
+.g-ballwrap{position:relative;width:150px;height:150px;cursor:pointer}
+.g-ball{position:relative;width:150px;height:150px;z-index:1;filter:drop-shadow(0 10px 0 rgba(0,0,0,.35))}
+.g-ballwrap.drop{animation:drop .9s cubic-bezier(.3,0,.5,1)}
+@keyframes drop{0%{transform:translateY(-70vh) rotate(-200deg)}55%{transform:translateY(0) rotate(0) scale(1.1,.85)}68%{transform:translateY(-60px) scale(.95,1.05)}82%{transform:translateY(0) scale(1.05,.95)}90%{transform:translateY(-14px)}100%{transform:none}}
+.g-ballwrap.shake{animation:gshake .7s ease-in-out}
+@keyframes gshake{0%,100%{transform:rotate(0)}15%{transform:rotate(-26deg) translateX(-10px)}35%{transform:rotate(22deg) translateX(8px)}55%{transform:rotate(-12deg)}75%{transform:rotate(6deg)}}
+.g-ballwrap.tremble{animation:tremble .08s linear infinite}
+@keyframes tremble{0%{transform:translate(2px,-1px) rotate(2deg)}50%{transform:translate(-2px,1px) rotate(-2deg)}100%{transform:translate(1px,2px)}}
+.g-glow{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;opacity:0;transition:all .35s;
+  background:radial-gradient(circle,var(--gc,#fff) 0,transparent 68%);transform:scale(var(--gs,1))}
+.g-glow.on{opacity:1;animation:pulse .5s ease-in-out infinite alternate}
+@keyframes pulse{to{filter:brightness(1.5);transform:scale(calc(var(--gs,1)*1.25))}}
+.g-hint{margin-top:26px;font-size:22px;opacity:0;text-shadow:2px 2px 0 #000;transition:opacity .3s}
+.g-hint.show{opacity:1;animation:hint 1s ease-in-out infinite}
+@keyframes hint{50%{transform:scale(1.08)}}
+.g-reveal{display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0;transform:scale(.6)}
+.g-reveal.in{animation:rvin .55s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes rvin{to{opacity:1;transform:none}}
+.g-mon{animation:float 2.2s ease-in-out infinite}
+.g-mon img{width:240px;height:240px;image-rendering:pixelated;filter:drop-shadow(0 0 18px rgba(255,255,255,.55)) drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+.t-legendaire .g-mon img{filter:drop-shadow(0 0 26px #ffd166) drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+.t-epique .g-mon img{filter:drop-shadow(0 0 22px #c9a0ff) drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+@keyframes float{50%{transform:translateY(-12px)}}
+.g-banner{font:700 34px var(--pix);color:#ffd166;text-shadow:3px 3px 0 #7a3a00,0 0 20px #ffb02a;letter-spacing:2px;animation:banner .7s cubic-bezier(.2,1.8,.4,1),glowtxt 1.2s ease-in-out infinite alternate .7s}
+.g-banner.epic{color:#e8d4ff;text-shadow:3px 3px 0 #4a2a6a,0 0 18px #c9a0ff}
+@keyframes banner{from{transform:scale(3) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes glowtxt{to{filter:brightness(1.4)}}
+.g-num{font-size:14px;opacity:.75}
+.g-name{font:700 36px var(--pix);min-height:44px;text-shadow:3px 3px 0 #000}
+.g-stars{font-size:30px;letter-spacing:4px}
+.g-stars span{color:rgba(255,255,255,.18);display:inline-block}
+.g-stars span.zap{color:#ffd166;text-shadow:0 0 12px #ffb02a;animation:starpop .45s cubic-bezier(.2,2,.4,1)}
+@keyframes starpop{from{transform:scale(3);opacity:0}to{transform:none;opacity:1}}
+.g-tier{font:700 14px var(--pix);color:#fff;border:2px solid #000;border-radius:99px;padding:3px 16px;text-shadow:1px 1px 0 rgba(0,0,0,.4);opacity:0}
+.g-tier.zap{opacity:1;animation:starpop .4s ease-out}
+.g-new{font:700 30px var(--pix);color:#fff;background:#e0533f;border:3px solid #000;border-radius:8px;padding:2px 16px;opacity:0;transform:rotate(-10deg)}
+.g-new.slam{animation:slam .45s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes slam{from{opacity:0;transform:scale(4) rotate(-25deg)}to{opacity:1;transform:rotate(-10deg)}}
+.g-dup{font-size:18px;opacity:0}.g-dup.show{opacity:1;animation:starpop .4s ease-out}
+.g-btns{display:flex;gap:10px;margin-top:14px;opacity:0;transition:opacity .4s}.g-btns.show{opacity:1}
+.g-btns button{font-size:16px;padding:9px 18px}
+.g-again{background:#ffd166;color:var(--ink);animation:hint 1s ease-in-out infinite}
 /* mode kiosque (télé, second écran) */
 body.kiosk header, body.kiosk aside{display:none}
 body.noaside aside{display:none}
@@ -249,6 +308,7 @@ body.noaside.chatting aside{display:flex}
 <script src="ui.js"></script>
 <script src="talk.js"></script>
 <script src="dex.js"></script>
+<script src="gacha.js"></script>
 <script src="events.js"></script>
 <script>
 'use strict';

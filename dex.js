@@ -103,17 +103,18 @@ function openDex(tab) {
   $dex.hidden = false; renderDex();
 }
 function closeDex() { if (!spinning) $dex.hidden = true; }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$dex.hidden) closeDex(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$dex.hidden && (typeof $g === 'undefined' || $g.hidden)) closeDex(); });
 $dex.addEventListener('click', e => { if (e.target === $dex) closeDex(); });
 const imgTag = (id, kind, cls) => '<img class="' + (cls || '') + '" src="' + SPRITE[kind](id) + '" alt="' + esc(dexName(id)) + '" loading="lazy" onerror="this.classList.add(\'nf\')">';
 function renderDex() {
   const tabs = [['roue', '🎡 Roue'], ['dex', '📕 Pokédex'], ['jardin', '🌳 Mon jardin']];
   $dex.innerHTML = '<div class="dx-frame"><div class="dx-top"><span class="dx-led"></span><span class="dx-led s r"></span><span class="dx-led s y"></span><span class="dx-led s g"></span>' +
     '<b>POKÉDEX</b><span class="dx-sp"></span><span class="dx-chip">🎟 ' + DEX.tickets + ' ticket' + (DEX.tickets > 1 ? 's' : '') + '</span><span class="dx-chip">🍬 ' + DEX.candies + '</span>' +
-    '<span class="dx-chip">' + caughtCount() + ' / ' + DEX_N + '</span><button class="dx-x" title="Fermer (Échap)">✕</button></div>' +
+    '<span class="dx-chip">' + caughtCount() + ' / ' + DEX_N + '</span><button class="dx-x dx-mute" title="Sons du gacha">' + (SETTINGS.gachaMute ? '🔇' : '🔊') + '</button><button class="dx-x" title="Fermer (Échap)">✕</button></div>' +
     (dexTab === 'starter' ? '' : '<div class="dx-tabs">' + tabs.map(([k, l]) => '<button data-tab="' + k + '" class="' + (dexTab === k ? 'on' : '') + '">' + l + '</button>').join('') + '</div>') +
     '<div class="dx-body"></div></div>';
-  $dex.querySelector('.dx-x').onclick = closeDex;
+  $dex.querySelector('.dx-x:not(.dx-mute)').onclick = closeDex;
+  $dex.querySelector('.dx-mute').onclick = () => { SETTINGS.gachaMute = !SETTINGS.gachaMute; saveSettings(); renderDex(); };
   $dex.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { if (!spinning) { dexTab = b.dataset.tab; renderDex(); } });
   const body = $dex.querySelector('.dx-body');
   if (dexTab === 'starter') renderStarter(body);
@@ -152,24 +153,33 @@ function ballIcon(c, x, y, r, b) {                           // une Ball dessin�
   c.restore();
 }
 let wheelAngle = 0;
-function drawWheel(cnv, ang) {
-  const c = cnv.getContext('2d'), s = cnv.width, R0 = s / 2 - 8, cx = s / 2, cy = s / 2, n = WHEEL.length;
+// spinning : les ampoules du bord défilent ; hl : part gagnante qui clignote
+function drawWheel(cnv, ang, spinning, hl) {
+  const c = cnv.getContext('2d'), s = cnv.width, R0 = s / 2 - 16, cx = s / 2, cy = s / 2, n = WHEEL.length, now = performance.now();
   c.clearRect(0, 0, s, s);
-  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 6, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 14, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#e0533f'; c.beginPath(); c.arc(cx, cy, R0 + 11, 0, Math.PI * 2); c.fill();
+  for (let i = 0; i < 24; i++) {                                     // guirlande d'ampoules
+    const a = i / 24 * Math.PI * 2, lit = spinning ? (Math.floor(now / 70) + i) % 3 === 0 : hl != null ? Math.floor(now / 180) % 2 === i % 2 : i % 2 === 0;
+    c.fillStyle = lit ? '#fff6b0' : '#8a3a2a'; c.beginPath(); c.arc(cx + Math.cos(a) * (R0 + 6), cy + Math.sin(a) * (R0 + 6), 3.2, 0, Math.PI * 2); c.fill();
+    if (lit) { c.fillStyle = 'rgba(255,240,150,.35)'; c.beginPath(); c.arc(cx + Math.cos(a) * (R0 + 6), cy + Math.sin(a) * (R0 + 6), 6, 0, Math.PI * 2); c.fill(); }
+  }
+  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 2, 0, Math.PI * 2); c.fill();
   WHEEL.forEach((b, i) => {
     const a0 = ang + i * 2 * Math.PI / n - Math.PI / 2, a1 = a0 + 2 * Math.PI / n;
-    c.fillStyle = i % 2 ? '#fbf3dc' : '#f2d29c'; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R0, a0, a1); c.closePath(); c.fill();
+    c.fillStyle = i === hl && Math.floor(now / 150) % 2 ? '#fff6b0' : i % 2 ? '#fbf3dc' : '#f2d29c'; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R0, a0, a1); c.closePath(); c.fill();
     c.strokeStyle = '#2a2636'; c.lineWidth = 2; c.stroke();
     const am = (a0 + a1) / 2; ballIcon(c, cx + Math.cos(am) * R0 * 0.66, cy + Math.sin(am) * R0 * 0.66, s * 0.065, b);
   });
   c.fillStyle = '#e0533f'; c.beginPath(); c.arc(cx, cy, 16, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#2a2636'; c.lineWidth = 3; c.stroke();
   c.fillStyle = '#ffffff'; c.font = '700 13px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('✻', cx, cy + 1);
   // flèche en haut
-  c.fillStyle = '#2a2636'; c.beginPath(); c.moveTo(cx - 13, 2); c.lineTo(cx + 13, 2); c.lineTo(cx, 26); c.closePath(); c.fill();
-  c.fillStyle = '#e0533f'; c.beginPath(); c.moveTo(cx - 9, 4); c.lineTo(cx + 9, 4); c.lineTo(cx, 21); c.closePath(); c.fill();
+  const bob = spinning ? Math.sin(now / 35) * 2 : 0;
+  c.fillStyle = '#2a2636'; c.beginPath(); c.moveTo(cx - 13, 0); c.lineTo(cx + 13, 0); c.lineTo(cx + bob, 28); c.closePath(); c.fill();
+  c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(cx - 9, 2); c.lineTo(cx + 9, 2); c.lineTo(cx + bob, 23); c.closePath(); c.fill();
 }
 function renderWheel(body) {
-  body.innerHTML = '<div class="dx-wheel"><canvas width="300" height="300"></canvas><div class="dx-side">' +
+  body.innerHTML = '<div class="dx-wheel"><canvas width="320" height="320"></canvas><div class="dx-side">' +
     '<div class="dx-dialog" id="dxMsg">' + (DEX.tickets ? 'Fais tourner la roue pour gagner une Ball !' : 'Plus de tickets… Tes agents en gagnent un à chaque tâche terminée.') + '</div>' +
     '<button class="dx-go"' + (DEX.tickets ? '' : ' disabled') + '>🎡 Tourner la roue · 1 🎟</button>' +
     (DEX.candies >= 5 ? '<button class="dx-candy">🍬 Échanger 5 bonbons contre 1 ticket</button>' : '<div class="dx-hint">🍬 Les doublons donnent des bonbons : 5 bonbons = 1 ticket.</div>') +
@@ -196,40 +206,31 @@ function spin(cnv, body) {
   let lastTick = -1;
   const step = () => {
     const p = Math.min(1, (performance.now() - t0) / dur), e = 1 - Math.pow(1 - p, 4);
-    wheelAngle = start + (end - start) * e; drawWheel(cnv, wheelAngle);
+    wheelAngle = start + (end - start) * e; drawWheel(cnv, wheelAngle, true);
     const tick = Math.floor((wheelAngle - start) / seg);
-    if (tick !== lastTick && SETTINGS.sound) { lastTick = tick; try { tone(1200, 0.03, 'square', 0.02); } catch { } }
+    if (tick !== lastTick) { lastTick = tick; if (!SETTINGS.gachaMute) try { tone(900 + (1 - p) * 700, 0.025, 'square', 0.02); } catch { } }
     if (p < 1) requestAnimationFrame(step);
-    else { wheelAngle = end % (2 * Math.PI); drawWheel(cnv, wheelAngle); showBall(body, ball); }
+    else {
+      wheelAngle = end % (2 * Math.PI);
+      // la part gagnante clignote un instant, puis le spectacle commence
+      const t1 = performance.now(), blink = () => { drawWheel(cnv, wheelAngle, false, slot); if (performance.now() - t1 < 900) requestAnimationFrame(blink); else openBall(ball); };
+      if (!SETTINGS.gachaMute) try { tone(1320, 0.12, 'square', 0.04); tone(1760, 0.2, 'square', 0.03, 0.1); } catch { }
+      blink();
+    }
   };
   requestAnimationFrame(step);
 }
-function showBall(body, ball) {
-  const box = body.querySelector('.dx-open'); box.hidden = false;
-  box.innerHTML = '<div class="dx-dialog">Tu as gagné une <b>' + BALLS[ball].name + '</b> ! Clique dessus pour l\'ouvrir.</div><canvas class="dx-ball" width="120" height="120" title="Ouvrir"></canvas>';
-  const cb = box.querySelector('canvas'); ballIcon(cb.getContext('2d'), 60, 60, 44, ball);
-  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  if (SETTINGS.sound) try { tone(660, 0.12); tone(990, 0.2, 'sine', 0.07, 0.1); } catch { }
-  cb.onclick = () => {
-    if (cb.classList.contains('shake')) return;
-    cb.classList.add('shake');
-    if (SETTINGS.sound) [0, 0.6, 1.2].forEach(d => { try { tone(300, 0.08, 'square', 0.03, d); } catch { } });
-    setTimeout(() => reveal(box, ball), 1900);
-  };
-}
-function reveal(box, ball) {
+function openBall(ball) {
   const { id, tier } = rollMon(ball), res = catchMon(id);
-  spinning = false;
-  box.innerHTML = '<div class="dx-reveal t-' + tier + '"><div class="dx-burst"></div>' + imgTag(id, 'front', 'big') +
-    '<div class="dx-name">N° ' + String(id).padStart(3, '0') + ' · <b>' + esc(dexName(id)) + '</b></div>' +
-    '<div class="dx-tier" style="background:' + TIER_COLOR[tier] + '">' + TIER_LABEL[tier] + ' · taux de capture ' + CAPTURE[id - 1] + '</div>' +
-    '<div class="dx-dialog">' + (res.isNew ? '✨ Nouveau ! ' + esc(dexName(id)) + ' a été ajouté au Pokédex' + (DEX.team.includes(id) ? ' et s\'installe dans ton jardin.' : '.') : 'Déjà attrapé… +' + res.candy + ' 🍬 bonbon' + (res.candy > 1 ? 's' : '') + '.') + '</div>' +
-    '<button class="dx-again">' + (DEX.tickets ? '🎡 Encore un tour (' + DEX.tickets + ' 🎟)' : 'OK') + '</button></div>';
-  if (SETTINGS.sound) try { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.03, i * 0.11)); } catch { }
   if (typeof pushNews === 'function') pushNews('📕', (res.isNew ? 'Nouveau Pokémon : ' : 'Encore un ') + dexName(id) + ' (' + TIER_LABEL[tier] + ')', res.isNew ? 'party' : '');
-  box.querySelector('.dx-again').onclick = () => { renderDex(); };
   updateDexButton();
-  const chips = $dex.querySelectorAll('.dx-chip'); if (chips[0]) chips[0].textContent = '🎟 ' + DEX.tickets + ' ticket' + (DEX.tickets > 1 ? 's' : ''); if (chips[1]) chips[1].textContent = '🍬 ' + DEX.candies; if (chips[2]) chips[2].textContent = caughtCount() + ' / ' + DEX_N;
+  const done = action => {
+    spinning = false;
+    if (action === 'dex') { dexTab = 'dex'; renderDex(); return; }
+    renderDex();
+    if (action === 'again') { const go = $dex.querySelector('.dx-go'); if (go) go.click(); }
+  };
+  if (typeof gachaShow === 'function') gachaShow(ball, { id, tier, isNew: res.isNew, candy: res.candy }, done); else done('ok');
 }
 
 // le Pokédex : 151 cases, silhouettes pour ceux qu'il reste à attraper

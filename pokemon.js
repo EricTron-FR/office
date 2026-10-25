@@ -93,7 +93,7 @@ HOOKS.update.push((dt, now) => {
   if (badWeather()) return;
   const m = pick(MONS.filter(m => !m.water && !m.path.length && m.mode !== 'sleep'));
   if (!m) return;
-  if (Math.random() < 0.7) {
+  if (Math.random() < 0.55) {
     const a = pick(freeIdle().filter(a => !a.isSub || Math.random() < 0.5));
     const cell = a && besideOf(m);
     if (!cell) return;
@@ -120,16 +120,92 @@ HOOKS.update.push((dt, now) => {
     if (typeof say === 'function') setTimeout(() => say(m, m.cry, { mon: true }), 900);
     setTimeout(() => { a._played = false; a.playMon = null; if (m.playUntil <= performance.now() + 50) { m.mode = 'idle'; m.label = ''; } }, 9200);
   });
-  cats.forEach(c => {                                                  // le chat renifle… et Pikachu lui envoie une petite décharge
+  cats.forEach(c => {                                                  // le chat a reniflé le Pokémon : ils deviennent copains et jouent
     const m = c.sniff;
     if (!m || c.path.length) return;
-    c.sniff = null; c.dir = m.x > c.x ? 1 : -1;
-    if (SPARKY.has(m.dex)) {
-      m.mode = 'spark'; m.label = MON_LABEL.spark; m.next = now + 2500;
-      emote(c, '⚡', 2000); c.zoomUntil = now + 5000;
-      news('⚡', m.name + ' envoie une petite décharge à ' + c.name + ' !');
-    } else { emote(c, '❓', 1800); emote(m, '❤️', 1800); }
+    c.sniff = null; c.dir = m.x > c.x ? 1 : -1; m.dir = -c.dir;
+    emote(c, '❤️', 1800); emote(m, '❤️', 1800);
+    startCatPlay(c, m, now);
   });
+});
+
+/* ---------- chats et Pokémon : jeux entre copains ---------- */
+// chat (on se court après, chacun son tour) · sieste collés · étincelles de Pikachu que le chat essaie d'attraper · bisou du nez
+const CAT_GAMES = {
+  chase: { label: (c, m) => 'Joue à chat avec ' + m.name, news: (c, m) => c.name + ' et ' + m.name + ' jouent à chat dans le jardin', ms: 16000 },
+  nap: { label: (c, m) => 'Fait la sieste collé à ' + m.name, news: (c, m) => c.name + ' fait la sieste avec ' + m.name, ms: 22000 },
+  sparkles: { label: (c, m) => 'Essaie d\'attraper les étincelles de ' + m.name, news: (c, m) => m.name + ' fait des petites étincelles pour amuser ' + c.name, ms: 12000 },
+  boop: { label: (c, m) => 'Fait un bisou du nez à ' + m.name, news: (c, m) => c.name + ' fait un bisou du nez à ' + m.name, ms: 7000 }
+};
+const CAT_PLAYS = [];
+function startCatPlay(c, m, now, forced) {
+  const games = ['chase', 'chase', 'boop', 'nap'];
+  if (SPARKY.has(m.dex)) games.push('sparkles', 'sparkles');
+  const game = forced || (night() ? 'nap' : pick(games)), G = CAT_GAMES[game];
+  m.path = [];
+  if (game !== 'chase') {                                             // pour la sieste, le bisou et les étincelles : le chat vient se coller
+    const [x, y] = [Math.floor(m.x), Math.floor(m.y)], side = [[x + 1, y], [x - 1, y], [x, y + 1]].find(([p, q]) => gardenFree(p, q));
+    if (side && Math.hypot(c.x - side[0] - 0.5, c.y - side[1] - 0.5) > 0.3) catGo(c, side, null);
+  }
+  CAT_PLAYS.push({ c, m, game, label: G.label(c, m), until: now + G.ms, step: 0, leaderCat: Math.random() < 0.5 });
+  c.catPlay = m.catPlay = true; c.nextMove = m.next = now + 99999;
+  c.label = G.label(c, m); m.mode = game === 'nap' ? 'sleep' : 'play'; m.label = 'Joue avec ' + c.name;
+  if (game === 'nap') { c.mode = 'sleep'; m.label = 'Fait la sieste avec ' + c.name; }
+  news(game === 'nap' ? '😴' : '🐾', G.news(c, m));
+}
+function endCatPlay(p, now) {
+  const { c, m } = p;
+  c.catPlay = m.catPlay = false; c.z = 0; c.label = null; c.nextMove = now + 3000 + Math.random() * 3000;
+  if (m.mode !== 'sleep' || p.game === 'nap') { m.mode = 'idle'; m.label = ''; }
+  m.next = now + 4000;
+  emote(c, pick(['😸', '❤️']), 2000); emote(m, '❤️', 2000);
+}
+// une case libre du jardin pas trop loin, pour courir
+function nearGarden(x, y, r) {
+  for (let n = 0; n < 20; n++) {
+    const cx = Math.floor(x) + Math.round((Math.random() * 2 - 1) * r), cy = Math.floor(y) + Math.round((Math.random() * 2 - 1) * r);
+    if (gardenFree(cx, cy) && !inTall(cx, cy)) return [cx, cy];
+  }
+  return null;
+}
+HOOKS.update.push((dt, now) => {
+  for (let i = CAT_PLAYS.length - 1; i >= 0; i--) {
+    const p = CAT_PLAYS[i], { c, m } = p;
+    // fin du jeu (ou interrompu : laser, pluie, caresse, Pokémon retiré du jardin)
+    if (now > p.until || LASER.on || badWeather() || c.ride || !MONS.includes(m) || c.petUntil > now) { CAT_PLAYS.splice(i, 1); endCatPlay(p, now); continue; }
+    c.nextMove = m.next = now + 99999; c.label = p.label;
+    if (p.game === 'chase') {                                            // chacun son tour : l'un file, l'autre le poursuit
+      if (now > (p.swap || 0)) {
+        p.swap = now + 3200 + Math.random() * 1200; p.leaderCat = !p.leaderCat;
+        const lead = p.leaderCat ? c : m, cell = nearGarden(lead.x, lead.y, 4);
+        if (cell) { if (p.leaderCat) catGo(c, cell, null); else monGo(m, cell, 'play', 'Joue à chat avec ' + c.name); }
+        emote(p.leaderCat ? m : c, pick(['😆', '✨', '❗']), 1200);
+        if (!c.baseSpeed) c.baseSpeed = c.speed; c.speed = c.baseSpeed * 1.3;
+      }
+      if (now > (p.follow || 0)) {                                       // le poursuivant suit (sans coller)
+        p.follow = now + 450;
+        const lead = p.leaderCat ? c : m, chaser = p.leaderCat ? m : c;
+        if (Math.hypot(lead.x - chaser.x, lead.y - chaser.y) > 1.3) {
+          const tx = Math.floor(lead.x), ty = Math.floor(lead.y);
+          const cell = [[tx - 1, ty], [tx + 1, ty], [tx, ty + 1], [tx, ty - 1]].find(([a, b]) => gardenFree(a, b));
+          if (cell) { if (chaser === c) { c.path = bfs(cellOf(c), cell); c.mode = 'walk'; } else monGo(m, cell, 'play', 'Joue à chat avec ' + c.name); }
+        }
+      }
+      if (!c.path.length) c.mode = 'sit';
+    } else if (p.game === 'sparkles') {                                  // Pikachu fait de petites étincelles, le chat saute pour les attraper
+      m.mode = 'spark'; m.label = 'Fait des étincelles pour ' + c.name;
+      if (!c.path.length) { c.mode = 'sit'; c.dir = m.x > c.x ? 1 : -1; const ph = (now % 900) / 900; c.z = ph < 0.4 ? Math.round(Math.sin(ph / 0.4 * Math.PI) * 9) : 0; }
+      if (now > (p.emo || 0)) { p.emo = now + 3000; emote(c, pick(['😸', '✨', '😺']), 1500); }
+    } else if (p.game === 'boop') {
+      if (!p.step && !c.path.length) { p.step = 1; c.dir = m.x > c.x ? 1 : -1; m.dir = -c.dir; if (typeof say === 'function') say(m, m.cry, { mon: true }); }
+      if (now > (p.emo || 0)) { p.emo = now + 2200; emote(c, '😽', 1500); emote(m, '❤️', 1500); }
+    } else if (p.game === 'nap') {                                       // collés l'un à l'autre, qui respirent ensemble
+      if (!c.path.length) { c.mode = 'sleep'; c.dir = m.x > c.x ? 1 : -1; }
+      m.mode = 'sleep';
+      if (now > (p.emo || 0)) { p.emo = now + 6000; emote(c, '💤', 2500); }
+    }
+  }
+  cats.forEach(c => { if (!c.catPlay && c.baseSpeed && !c.playUntil && !c.zoomUntil && !c.chasing) c.speed = c.baseSpeed; });
 });
 // de temps en temps, un Pokémon sauvage surgit des hautes herbes
 let wildTick = performance.now() + 90000;
