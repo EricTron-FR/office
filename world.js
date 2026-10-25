@@ -1245,6 +1245,7 @@ function updateCat(c, dt, now) {
     const [tx, ty] = c.path[0], tx2 = tx + 0.5, ty2 = ty + 0.5;
     const dx = tx2 - c.x, dy = ty2 - c.y, dist = Math.hypot(dx, dy), stp = c.speed * dt;
     if (Math.abs(dx) > 0.01) c.dir = dx > 0 ? 1 : -1;
+    c.face = Math.abs(dy) > Math.abs(dx) + 0.01 ? (dy > 0 ? 'down' : 'up') : 'side';
     if (dist <= stp) { c.x = tx2; c.y = ty2; c.path.shift(); if (!c.path.length) catArrive(c); }
     else { c.x += dx / dist * stp; c.y += dy / dist * stp; }
   }
@@ -1271,6 +1272,21 @@ const CAT_SPR = {
     '.O.....O...', 'OIO...OIO..', 'ObbbSbbbO..', 'ObBBSBBBO..', 'OBEWBEWBO..', 'OBEEBEEBO..', 'ODBBNBBDO..',
     '.ODBBBDO...', '.OBbbbBO...', 'OBSbbbSBO..', 'OBBbbbBBO.O', 'OBSBBBSBOBO', 'ODBOBOBDDO.', '.OOOOOOOOO.'
   ],
+  // de face (vers le bas) et de dos (vers le haut), deux images de marche chacun
+  down: [[
+    '.O.....O.....', 'OIO...OIO..O.', 'ObbbSbbbO.OBO', 'ObBBSBBBO.OBO', 'OBEWBEWBO.OBO', 'OBEEBEEBOOBO.', 'ODBBNBBDOBO..',
+    '.ODBBBDOOO...', '.OBbbbBBO....', '.OBbbbBBO....', '.ODBDBDDO....', '.OBO.OOO.....', '.OOO.........'
+  ], [
+    '.O.....O.....', 'OIO...OIO..O.', 'ObbbSbbbO.OBO', 'ObBBSBBBO.OBO', 'OBEWBEWBO.OBO', 'OBEEBEEBOOBO.', 'ODBBNBBDOBO..',
+    '.ODBBBDOOO...', '.OBbbbBBO....', '.OBbbbBBO....', '.ODBDBDDO....', '.OOO.OBO.....', '.....OOO.....'
+  ]],
+  up: [[
+    '.O.....O.', 'ObO...ObO', 'ObbbSbbbO', 'ObBBSBBBO', 'OBBBSBBBO', 'ODBBBBBDO', '.ODDDDDO.',
+    '.OBBDBBO.', 'OBBBDBBBO', 'OBBBDBBBO', 'ODBBDBBDO', '.OBO.OOO.', '.OOO.....'
+  ], [
+    '.O.....O.', 'ObO...ObO', 'ObbbSbbbO', 'ObBBSBBBO', 'OBBBSBBBO', 'ODBBBBBDO', '.ODDDDDO.',
+    '.OBBDBBO.', 'OBBBDBBBO', 'OBBBDBBBO', 'ODBBDBBDO', '.OOO.OBO.', '.....OOO.'
+  ]],
   sleep: [
     '..........O..O.', '....OOOOOOIOOIO', '..OObbSbSObbbbO', '.ObBBBSBSBBBBBO', 'OBBBBBBBBBOOBOO', 'OBbbbbbbbbBBNBO',
     'ODDDDDDDDDDDDO.', '.OOOOOOOOOOOOO.'
@@ -1298,7 +1314,8 @@ function drawCat(c, t) {
     drawSprite(rows, x, y, pal, flip);
   } else {                                                     // marche, deux images
     const f = Math.floor(t * 9 + (c.big ? 0.5 : 0)) % 2;
-    drawSprite(CAT_SPR.walk[f], x, y - f, pal, flip);
+    if (c.face === 'down' || c.face === 'up') drawSprite(CAT_SPR[c.face][f], x, y, pal, false);
+    else drawSprite(CAT_SPR.walk[f], x, y - f, pal, flip);
   }
   if (c.petUntil > performance.now()) {                        // cœurs quand on le caresse
     for (let i = 0; i < 2; i++) {
