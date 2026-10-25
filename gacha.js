@@ -257,3 +257,187 @@ function nextCeleb() {
   const close = () => { if (!box.parentNode) return; box.classList.add('out'); setTimeout(() => { box.remove(); nextCeleb(); }, 300); };
   box.onclick = close; setTimeout(close, 5200);
 }
+
+/* ====================================================================
+   La grande roue, en plein écran, façon jeu télé
+   Maintiens le bouton : la jauge de puissance oscille, relâche au bon moment (« PARFAIT ! »).
+   La roue part en trombe (flou de vitesse), le clapet claque sur chaque picot, les ampoules suivent
+   la vitesse, puis elle ralentit… dépasse parfois sur la part d'à côté avant de revenir. Explosion,
+   bannière, et on enchaîne sur l'ouverture de la Ball.
+   ==================================================================== */
+const WSEG = {                                           // couleurs des parts selon la Ball
+  poke: ['#ff6a55', '#c8392a'], super: ['#5f9aff', '#2f5fc8'], hyper: ['#4a4458', '#1f1a28'], master: ['#b878ff', '#6a2fc0']
+};
+function drawBigWheel(c, size, ang, o) {
+  const n = WHEEL.length, seg = 2 * Math.PI / n, cx = size / 2, cy = size / 2 + 10, R0 = size / 2 - 34, now = performance.now();
+  c.clearRect(0, 0, size, size + 20);
+  // halo derrière la roue
+  const halo = c.createRadialGradient(cx, cy, R0 * 0.6, cx, cy, R0 + 40); halo.addColorStop(0, 'rgba(255,220,120,.25)'); halo.addColorStop(1, 'rgba(255,220,120,0)');
+  c.fillStyle = halo; c.beginPath(); c.arc(cx, cy, R0 + 40, 0, Math.PI * 2); c.fill();
+  // anneau doré + ampoules
+  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 26, 0, Math.PI * 2); c.fill();
+  const rim = c.createLinearGradient(0, cy - R0, 0, cy + R0); rim.addColorStop(0, '#ffe08a'); rim.addColorStop(0.5, '#e0a030'); rim.addColorStop(1, '#a86a10');
+  c.fillStyle = rim; c.beginPath(); c.arc(cx, cy, R0 + 22, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 6, 0, Math.PI * 2); c.fill();
+  const NB = 32;
+  for (let i = 0; i < NB; i++) {
+    const a = i / NB * Math.PI * 2, bx = cx + Math.cos(a) * (R0 + 14), by = cy + Math.sin(a) * (R0 + 14);
+    let lit;
+    if (o.mode === 'win') lit = Math.floor(now / 120) % 2 === i % 2;
+    else if (o.mode === 'idle') lit = (Math.floor(now / 220) + i) % 4 === 0;
+    else lit = (Math.floor(o.chase) + i) % 4 < 2;
+    if (lit) { c.fillStyle = 'rgba(255,240,170,.45)'; c.beginPath(); c.arc(bx, by, 9, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = o.mode === 'win' && lit ? o.winColor : lit ? '#fff6b0' : '#7a4a10'; c.beginPath(); c.arc(bx, by, 5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.arc(bx - 1.5, by - 1.5, 1.6, 0, Math.PI * 2); c.fill();
+  }
+  // les parts (avec flou de vitesse : copies fantômes un peu en arrière)
+  const ghosts = o.vel > 7 ? [[-o.vel * 0.018, 0.22], [-o.vel * 0.009, 0.4]] : [];
+  [...ghosts, [0, 1]].forEach(([da, alpha]) => {
+    c.globalAlpha = alpha;
+    WHEEL.forEach((b, i) => {
+      const a0 = ang + da + i * seg - Math.PI / 2, a1 = a0 + seg, [c1, c2] = WSEG[b];
+      const gr = c.createRadialGradient(cx, cy, 10, cx, cy, R0); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
+      c.fillStyle = (o.mode === 'win' && i === o.slot && Math.floor(now / 110) % 2) ? '#fff6b0' : gr;
+      c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R0, a0, a1); c.closePath(); c.fill();
+      c.strokeStyle = '#fff3c8'; c.lineWidth = 3; c.stroke();
+      if (alpha === 1) {
+        const am = (a0 + a1) / 2;
+        ballIcon(c, cx + Math.cos(am) * R0 * 0.62, cy + Math.sin(am) * R0 * 0.62, R0 * 0.13, b);
+        c.save(); c.translate(cx + Math.cos(am) * R0 * 0.88, cy + Math.sin(am) * R0 * 0.88); c.rotate(am + Math.PI / 2);
+        c.fillStyle = 'rgba(255,255,255,.92)'; c.font = '700 ' + Math.round(R0 * 0.065) + 'px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(BALLS[b].name.split(' ')[0].toUpperCase(), 0, 0); c.restore();
+      }
+    });
+  });
+  c.globalAlpha = 1;
+  // reflet sur la roue
+  const sh = c.createLinearGradient(cx - R0, cy - R0, cx + R0, cy + R0); sh.addColorStop(0, 'rgba(255,255,255,.22)'); sh.addColorStop(0.45, 'rgba(255,255,255,0)');
+  c.fillStyle = sh; c.beginPath(); c.arc(cx, cy, R0, 0, Math.PI * 2); c.fill();
+  // picots (le clapet tape dessus)
+  for (let i = 0; i < n * 2; i++) {
+    const a = ang + i * seg / 2 - Math.PI / 2, qx = cx + Math.cos(a) * (R0 - 4), qy = cy + Math.sin(a) * (R0 - 4);
+    c.fillStyle = '#2a2636'; c.beginPath(); c.arc(qx, qy, 4.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffe08a'; c.beginPath(); c.arc(qx, qy, 3, 0, Math.PI * 2); c.fill();
+  }
+  // moyeu
+  const hub = c.createRadialGradient(cx - 8, cy - 8, 2, cx, cy, 34); hub.addColorStop(0, '#ff9a80'); hub.addColorStop(1, '#c8392a');
+  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, 36, 0, Math.PI * 2); c.fill();
+  c.fillStyle = hub; c.beginPath(); c.arc(cx, cy, 32, 0, Math.PI * 2); c.fill();
+  c.save(); c.translate(cx, cy); c.rotate(-ang * 0.5); c.fillStyle = '#fff'; c.font = '700 34px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('✻', 0, 2); c.restore();
+  // le clapet en haut (il bascule quand il touche un picot)
+  c.save(); c.translate(cx, cy - R0 - 30); c.rotate(o.flap || 0);
+  c.fillStyle = '#2a2636'; c.beginPath(); c.moveTo(-20, -6); c.lineTo(20, -6); c.lineTo(0, 46); c.closePath(); c.fill();
+  c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(-14, -2); c.lineTo(14, -2); c.lineTo(0, 38); c.closePath(); c.fill();
+  c.fillStyle = '#e0533f'; c.beginPath(); c.arc(0, 0, 8, 0, Math.PI * 2); c.fill(); c.fillStyle = '#2a2636'; c.beginPath(); c.arc(0, 0, 3, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+// ball/slot : résultat déjà tiré ; multi : rafale (la roue tourne juste très vite). Renvoie l'angle final.
+async function gachaWheel(ball, slot, startAng, multi) {
+  const n = WHEEL.length, seg = 2 * Math.PI / n;
+  G = { skip: false, timers: [], click: null };
+  $g.querySelector('.g-skip').style.display = '';
+  $g.hidden = false; $g.className = 'g-on g-wheel t-commun'; gResize(); PARTS.length = 0; cancelAnimationFrame(gRaf); gLoop();
+  $grays.style.setProperty('--tc', '#ffd166'); $grays.classList.add('on');
+  const size = Math.max(300, Math.min(600, Math.floor(Math.min(innerWidth, innerHeight - 170) * 0.9)));
+  $gstage.innerHTML = '<div class="g-wtitle">' + (multi ? (multi >= 10 ? '🔥 RAFALE ×10 🔥' : '⚡ RAFALE ×5 ⚡') : '✨ ROUE DE LA CHANCE ✨') + '</div>' +
+    '<canvas class="g-bigwheel"></canvas><div class="g-wctl"><div class="g-power"><i></i><b></b></div>' +
+    '<button class="g-spin">MAINTIENS POUR LANCER !</button></div><div class="g-wbanner"></div>';
+  const cnv = $gstage.querySelector('.g-bigwheel'), d = window.devicePixelRatio || 1;
+  cnv.width = size * d; cnv.height = (size + 20) * d; cnv.style.width = size + 'px'; cnv.style.height = (size + 20) + 'px';
+  const c = cnv.getContext('2d'); c.scale(d, d);
+  const st = { ang: startAng || 0, vel: 0, chase: 0, flap: 0, mode: 'idle', slot, winColor: '#fff6b0' };
+  let raf = 0, alive = true;
+  const frame = () => { if (!alive) return; st.flap *= 0.82; drawBigWheel(c, size, st.ang, st); raf = requestAnimationFrame(frame); };
+  frame();
+  // 1. la jauge de puissance : maintenir, relâcher au bon moment
+  const btn = $gstage.querySelector('.g-spin'), pw = $gstage.querySelector('.g-power'), bar = pw.querySelector('i'), lab = pw.querySelector('b');
+  let power = 0.7;
+  if (!G.skip) await new Promise(res => {
+    let t0 = 0, holding = false, osc = 0;
+    const tick = () => {
+      if (!holding) return;
+      power = 0.5 - 0.5 * Math.cos((performance.now() - t0) / 1000 * Math.PI * 1.6);
+      bar.style.width = Math.round(power * 100) + '%';
+      bar.style.background = power > 0.92 ? '#ffd166' : power > 0.6 ? '#5fe39a' : '#5f9aff';
+      lab.textContent = power > 0.92 ? 'PARFAIT !' : '';
+      st.ang -= 0.004 + power * 0.01;                                     // la roue recule un peu : on prend son élan
+      const q = Math.floor(performance.now() / 90);
+      if (q !== osc) { osc = q; gTone(300 + power * 600, 0.02, 'square', 0.012); }
+      requestAnimationFrame(tick);
+    };
+    const down = e => { if (e && e.preventDefault) e.preventDefault(); if (holding) return; holding = true; t0 = performance.now(); pw.classList.add('on'); btn.textContent = 'RELÂCHE !'; tick(); };
+    const up = () => { if (!holding) return; holding = false; cleanup(); res(); };
+    const key = e => { if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (e.type === 'keydown') down(); else up(); } };
+    const cleanup = () => { btn.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up); window.removeEventListener('keydown', key, true); window.removeEventListener('keyup', key, true); G.click = null; };
+    btn.addEventListener('pointerdown', down); window.addEventListener('pointerup', up); window.addEventListener('keydown', key, true); window.addEventListener('keyup', key, true);
+    G.click = () => { cleanup(); res(); };                               // « Passer »
+  });
+  const perfect = power > 0.92;
+  $gstage.querySelector('.g-wctl').classList.add('gone');
+  if (perfect) {
+    gTone(NOTE(84), 0.1, 'square', 0.04); gTone(NOTE(91), 0.15, 'square', 0.04, 0.08);
+    const r = btn.getBoundingClientRect(); burst(r.left + r.width / 2, r.top, 40, ['#ffd166', '#ffffff'], { speed: 7, size: 5, shape: 'star' });
+  }
+  // 2. la trajectoire : le résultat, avec parfois un « presque » sur la part d'à côté
+  let target, overshoot = 0;
+  if (multi) target = st.ang + (10 + power * 6) * Math.PI;
+  else {
+    const base = -(slot + 0.5) * seg + (Math.random() - 0.5) * 0.5 * seg;
+    const turns = Math.ceil((st.ang - base) / (2 * Math.PI)) + 5 + Math.round(power * 4) + (perfect ? 1 : 0);
+    target = base + turns * 2 * Math.PI;
+    const neighbour = WHEEL[(slot - 1 + n) % n];
+    if (Math.random() < 0.45 || neighbour === 'master') overshoot = seg * (0.55 + Math.random() * 0.2);   // ça passe dessus… et ça revient
+  }
+  // 3. la rotation : départ en trombe, longue décélération
+  gNoise(0.6, 0.08, 0, 600);
+  const from = st.ang, dur = multi ? 2200 : 4300 + power * 1500, t0 = performance.now();
+  let lastPeg = Math.floor(from / (seg / 2)), lastT = t0, lastAng = from;
+  await new Promise(res => {
+    const step = () => {
+      const now = performance.now();
+      if (G.skip) { st.ang = target; res(); return; }
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3.4);
+      st.ang = from + (target + overshoot - from) * e;
+      const dt = Math.max(1, now - lastT) / 1000; st.vel = (st.ang - lastAng) / dt; lastT = now; lastAng = st.ang;
+      st.chase += st.vel * dt * 4; st.mode = 'spin';
+      const peg = Math.floor(st.ang / (seg / 2));
+      if (peg !== lastPeg) { lastPeg = peg; st.flap = Math.min(0.75, 0.25 + st.vel * 0.04); gTone(Math.max(700, 1900 - 3000 / Math.max(1, st.vel)) + Math.random() * 300, 0.018, 'square', 0.02); }
+      if (Math.random() < Math.min(0.6, st.vel / 30)) burst(innerWidth / 2 + (Math.random() - 0.5) * size, innerHeight / 2 + (Math.random() - 0.5) * size * 0.5, 1, ['#fff6b0'], { speed: 1, g: 0, size: 3, shape: 'spark' });
+      if (p < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+  if (overshoot && !G.skip) {                              // le retour en arrière, tout doucement : suspense !
+    await wait(420);
+    const a0 = st.ang, t1 = performance.now(), back = 650;
+    await new Promise(res => {
+      const step = () => {
+        const p = Math.min(1, (performance.now() - t1) / back), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        st.ang = a0 - overshoot * e;
+        const peg = Math.floor(st.ang / (seg / 2));
+        if (peg !== lastPeg) { lastPeg = peg; st.flap = -0.5; gTone(1100, 0.03, 'square', 0.03); }
+        if (p < 1 && !G.skip) requestAnimationFrame(step); else { st.ang = a0 - overshoot; res(); }
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  st.vel = 0;
+  // 4. arrêt : flash, explosion, bannière
+  const winBall = multi ? null : WHEEL[slot], col = winBall ? WSEG[winBall][0] : '#ffd166';
+  st.mode = 'win'; st.winColor = col;
+  $gflash.classList.remove('go'); void $gflash.offsetWidth; $gflash.classList.add('go');
+  const wr = cnv.getBoundingClientRect();
+  burst(wr.left + wr.width / 2, wr.top + 30, winBall === 'master' ? 220 : winBall === 'hyper' ? 140 : 90, [col, '#ffffff', '#ffd166'], { speed: 10, g: 0.15, size: 6 });
+  if (winBall === 'master') { gShake = 24; rain(['#b878ff', '#ff8fd0', '#ffd166', '#5fe8ff', '#ffffff'], 160, 'star'); FANFARE.legendaire(); }
+  else if (winBall === 'hyper') { gShake = 12; melody([67, 72, 76, 79, 84, 88], 0.06); gNoise(0.3, 0.07, 0, 800); }
+  else if (winBall === 'super') { gShake = 6; melody([72, 76, 79, 84], 0.07); }
+  else if (multi) { gShake = 10; melody([72, 76, 79, 84, 88, 91], 0.05); }
+  else melody([72, 79], 0.09);
+  const ban = $gstage.querySelector('.g-wbanner');
+  ban.textContent = multi ? 'C\'EST PARTI ×' + multi + ' !' : BALLS[winBall].name.toUpperCase() + ' !';
+  ban.style.color = col; ban.classList.add('show');
+  await wait(multi ? 900 : winBall === 'master' ? 1900 : 1300);
+  alive = false; cancelAnimationFrame(raf);
+  $grays.classList.remove('on');
+  return ((st.ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+}

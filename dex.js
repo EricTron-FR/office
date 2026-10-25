@@ -226,16 +226,8 @@ function spinMulti(cnv, body, n) {
   if (spinning || DEX.tickets < n) return;
   DEX.tickets -= n; saveDex(); spinning = true;
   body.querySelectorAll('button').forEach(b => { b.disabled = true; });
-  const t0 = performance.now(), dur = 1800, start = wheelAngle;
-  let lastTick = -1;
-  const step = () => {
-    const p = Math.min(1, (performance.now() - t0) / dur), e = 1 - Math.pow(1 - p, 3);
-    wheelAngle = start + e * 9 * Math.PI; drawWheel(cnv, wheelAngle, true);
-    const tick = Math.floor(wheelAngle / (Math.PI / 4));
-    if (tick !== lastTick) { lastTick = tick; if (!SETTINGS.gachaMute) try { tone(1000 + p * 900, 0.02, 'square', 0.02); } catch { } }
-    if (p < 1) requestAnimationFrame(step); else { wheelAngle %= 2 * Math.PI; openMulti(n); }
-  };
-  requestAnimationFrame(step);
+  if (typeof gachaWheel !== 'function') { openMulti(n); return; }
+  gachaWheel(null, null, wheelAngle, n).then(ang => { wheelAngle = ang; openMulti(n); });
 }
 function openMulti(n) {
   const rolls = [];
@@ -260,29 +252,11 @@ function openMulti(n) {
 function spin(cnv, body) {
   if (spinning || DEX.tickets < 1) return;
   DEX.tickets--; saveDex(); spinning = true;
-  body.querySelector('.dx-go').disabled = true;
-  const ball = rollBall(), n = WHEEL.length;
+  body.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  const ball = rollBall();
   const slots = WHEEL.map((b, i) => b === ball ? i : -1).filter(i => i >= 0), slot = pick(slots);
-  // la part gagnante doit finir sous la flèche (en haut)
-  const seg = 2 * Math.PI / n, target = -(slot + 0.5) * seg + (Math.random() - 0.5) * 0.6 * seg;
-  const start = wheelAngle, end = target + 2 * Math.PI * Math.ceil((start + 10 * Math.PI - target) / (2 * Math.PI));   // au moins 5 tours
-  const t0 = performance.now(), dur = 3600;
-  let lastTick = -1;
-  const step = () => {
-    const p = Math.min(1, (performance.now() - t0) / dur), e = 1 - Math.pow(1 - p, 4);
-    wheelAngle = start + (end - start) * e; drawWheel(cnv, wheelAngle, true);
-    const tick = Math.floor((wheelAngle - start) / seg);
-    if (tick !== lastTick) { lastTick = tick; if (!SETTINGS.gachaMute) try { tone(900 + (1 - p) * 700, 0.025, 'square', 0.02); } catch { } }
-    if (p < 1) requestAnimationFrame(step);
-    else {
-      wheelAngle = end % (2 * Math.PI);
-      // la part gagnante clignote un instant, puis le spectacle commence
-      const t1 = performance.now(), blink = () => { drawWheel(cnv, wheelAngle, false, slot); if (performance.now() - t1 < 900) requestAnimationFrame(blink); else openBall(ball); };
-      if (!SETTINGS.gachaMute) try { tone(1320, 0.12, 'square', 0.04); tone(1760, 0.2, 'square', 0.03, 0.1); } catch { }
-      blink();
-    }
-  };
-  requestAnimationFrame(step);
+  if (typeof gachaWheel !== 'function') { openBall(ball); return; }
+  gachaWheel(ball, slot, wheelAngle).then(ang => { wheelAngle = ang; drawWheel(cnv, wheelAngle); openBall(ball); });
 }
 function openBall(ball) {
   const { id, tier } = rollMon(ball), res = catchMon(id);

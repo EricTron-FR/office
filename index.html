@@ -271,6 +271,25 @@ img.nf{visibility:hidden}
 .cb-title{font:700 24px var(--pix);color:var(--ink)}.cb-sub{font-size:14px;color:var(--mute);margin:2px 0 6px}
 .cb-rew{display:inline-block;font:700 18px var(--pix);background:var(--yellow);border:2px solid var(--ink);border-radius:99px;padding:2px 14px;animation:starpop .5s .3s both}
 .cb-card small{display:block;margin-top:8px;color:var(--mute);font-size:11px}
+/* la grande roue, plein écran */
+#gacha.g-wheel{background:radial-gradient(ellipse at 50% 30%,#4a2a6a 0,#1a1030 55%,#0c0818 100%)}
+#gacha.g-wheel::before{content:'';position:absolute;left:50%;top:-10%;width:60vmin;height:120%;margin-left:-30vmin;background:linear-gradient(rgba(255,240,180,.16),transparent 70%);clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);pointer-events:none;animation:spot 3s ease-in-out infinite alternate}
+@keyframes spot{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+.g-wtitle{font:700 30px var(--pix);color:#ffd166;letter-spacing:2px;text-shadow:3px 3px 0 #7a3a00,0 0 18px #ffb02a;margin-bottom:4px;animation:banner .6s cubic-bezier(.2,1.8,.4,1),glowtxt 1s ease-in-out infinite alternate .6s}
+.g-bigwheel{filter:drop-shadow(0 18px 30px rgba(0,0,0,.55))}
+.g-wctl{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:6px;transition:opacity .3s,transform .3s}
+.g-wctl.gone{opacity:0;transform:translateY(20px);pointer-events:none}
+.g-power{position:relative;width:min(420px,80vw);height:20px;border:3px solid #fff;border-radius:99px;background:rgba(0,0,0,.4);overflow:hidden;opacity:.4;transition:opacity .2s}
+.g-power.on{opacity:1;box-shadow:0 0 18px rgba(255,209,102,.5)}
+.g-power i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:99px;background:#5f9aff}
+.g-power b{position:absolute;inset:0;text-align:center;font:700 13px/14px var(--pix);color:#2a2636;text-shadow:0 0 4px #fff}
+.g-spin{font:700 22px var(--pix);padding:14px 34px;border-radius:14px;background:linear-gradient(#ff7a5f,#e0533f);color:#fff;border:3px solid #000;text-shadow:2px 2px 0 rgba(0,0,0,.35);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -5px 0 rgba(0,0,0,.25),0 6px 0 #000;animation:hint 1s ease-in-out infinite;touch-action:none;user-select:none}
+.g-spin:active{transform:translateY(4px);box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.25),0 2px 0 #000;animation:none}
+.g-wbanner{position:absolute;left:0;right:0;top:46%;text-align:center;font:700 54px var(--pix);text-shadow:4px 4px 0 #000,0 0 30px currentColor;opacity:0;pointer-events:none}
+.g-wbanner.show{animation:wban 1.2s cubic-bezier(.2,1.7,.4,1) forwards}
+@keyframes wban{0%{opacity:0;transform:scale(3.5) rotate(-10deg)}35%{opacity:1;transform:scale(.9) rotate(2deg)}55%{transform:scale(1.08)}100%{opacity:1;transform:none}}
+@media (max-width:700px){.g-wtitle{font-size:20px}.g-wbanner{font-size:34px}.g-spin{font-size:17px;padding:11px 22px}}
 /* le spectacle d'ouverture de Ball */
 #gacha{position:fixed;inset:0;z-index:40;overflow:hidden;background:radial-gradient(circle at 50% 50%,#3a2f58 0,#15101f 70%);font-family:var(--pix);color:#fff}
 #gacha[hidden]{display:none}
