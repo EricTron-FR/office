@@ -95,6 +95,7 @@ function catchMon(id) {
   DEX.caught[id] = (DEX.caught[id] || 0) + 1; DEX.pulls++;
   let coins = 0;
   if (!isNew) { coins = COINS[TIER_OF[id]]; DEX.coins = (DEX.coins || 0) + coins; }
+  if (isNew) { DEX.got = DEX.got || {}; DEX.got[id] = Date.now(); }
   if (isNew && DEX.team.length < 6) { DEX.team.push(id); if (typeof setGardenTeam === 'function') setGardenTeam(DEX.team); }
   stat('pulls'); if (isNew) stat('newmons');
   const t = TIER_OF[id]; if (t === 'epique') stat('epics'); if (t === 'legendaire') stat('legends'); if (dexEl(id, 'g')) stat('ghosts');
@@ -249,15 +250,21 @@ function openBall(ball) {
 }
 
 // le Pokédex : par région, silhouettes pour ceux qu'il reste à attraper
-let dexRegion = 'Kanto', dexOnlyMine = false;
+let dexRegion = 'Kanto', dexOnlyMine = false, dexQ = '';
+// recherche : par nom (Pokémon attrapés seulement, les autres restent des ???) ou par numéro
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const dexMatch = (id, q) => !q || String(id) === q.replace(/^0+/, '') || (!!DEX.caught[id] && norm(dexName(id)).includes(norm(q)));
 const regionCount = r => { let n = 0; for (let id = r[1]; id <= r[2]; id++) if (DEX.caught[id]) n++; return n; };
 function renderGrid(body) {
   const reg = REGIONS.find(r => r[0] === dexRegion) || REGIONS[0];
   let h = '<div class="dx-regions">' + REGIONS.map(r => { const n = regionCount(r), tot = r[2] - r[1] + 1;
     return '<button data-reg="' + r[0] + '" class="' + (r[0] === reg[0] ? 'on' : '') + (n === tot ? ' full' : '') + '">' + r[0] + ' <small>' + n + '/' + tot + '</small></button>'; }).join('') + '</div>' +
-    '<label class="dx-only"><input type="checkbox"' + (dexOnlyMine ? ' checked' : '') + '> Seulement mes Pokémon</label><div class="dx-grid">';
-  for (let id = reg[1]; id <= reg[2]; id++) {
+    '<div class="dx-filt"><input class="dx-q" type="search" placeholder="🔍 Nom ou numéro (toutes régions)" value="' + esc(dexQ) + '">' +
+    '<label class="dx-only"><input type="checkbox"' + (dexOnlyMine ? ' checked' : '') + '> Seulement mes Pokémon</label></div><div class="dx-grid">';
+  const q = dexQ.trim(), from = q ? 1 : reg[1], to = q ? DEX_N : reg[2];
+  for (let id = from; id <= to; id++) {
     if (dexOnlyMine && !DEX.caught[id]) continue;
+    if (!dexMatch(id, q)) continue;
     const n = DEX.caught[id] || 0, tier = TIER_OF[id];
     h += '<div class="dx-cell' + (n ? ' got' : '') + (DEX.team.includes(id) ? ' team' : '') + '" title="' + (n ? esc(dexName(id)) + ' · ' + TIER_LABEL[tier] + ' · taux de capture ' + CAPTURE[id - 1] + ' · ×' + n : '??? · ' + TIER_LABEL[tier]) + '" data-id="' + id + '">' +
       '<span class="num">' + String(id).padStart(3, '0') + '</span>' + imgTag(id, 'icon', n ? '' : 'sil') +
@@ -267,6 +274,8 @@ function renderGrid(body) {
   body.innerHTML = '<div class="dx-hint">Clique sur un Pokémon attrapé pour l\'ajouter à ton jardin (ou l\'en retirer). 🌳 = dans le jardin.</div>' + h + '</div>';
   body.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => { dexRegion = b.dataset.reg; renderDex(); });
   body.querySelector('.dx-only input').onchange = e => { dexOnlyMine = e.target.checked; renderDex(); };
+  const qi = body.querySelector('.dx-q');
+  qi.oninput = () => { dexQ = qi.value; renderDex(); const n = $dex.querySelector('.dx-q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
   body.querySelectorAll('.dx-cell.got').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.id); renderDex(); });
 }
 function toggleTeam(id) {
@@ -276,18 +285,58 @@ function toggleTeam(id) {
   else DEX.team.push(id);
   saveDex(); if (typeof setGardenTeam === 'function') setGardenTeam(DEX.team);
 }
-// le jardin : les 6 Pokémon qui y vivent
+// le jardin : les 6 Pokémon qui y vivent ; la liste se filtre (nom, région, rareté, type) et se trie
+const TEAM_F = { q: '', reg: '', tier: '', el: '', sort: 'recent', out: false };
+const EL_LABEL = { w: '💧 Eau', f: '🔥 Feu', e: '⚡ Électrik', v: '🪽 Vol', g: '👻 Spectre' };
+function teamList() {
+  const f = TEAM_F, reg = REGIONS.find(r => r[0] === f.reg), q = norm(f.q.trim());
+  const got = DEX.got || {};
+  return Object.keys(DEX.caught).map(Number).filter(id =>
+    (!q || norm(dexName(id)).includes(q) || String(id) === q.replace(/^0+/, '')) &&
+    (!reg || (id >= reg[1] && id <= reg[2])) && (!f.tier || TIER_OF[id] === f.tier) && (!f.el || dexEl(id, f.el)) && (!f.out || !DEX.team.includes(id))
+  ).sort(f.sort === 'name' ? (a, b) => dexName(a).localeCompare(dexName(b), 'fr')
+    : f.sort === 'rare' ? (a, b) => TIERS.indexOf(TIER_OF[b]) - TIERS.indexOf(TIER_OF[a]) || CAPTURE[a - 1] - CAPTURE[b - 1]
+    : f.sort === 'count' ? (a, b) => DEX.caught[b] - DEX.caught[a] || a - b
+    : f.sort === 'recent' ? (a, b) => (got[b] || 0) - (got[a] || 0) || b - a
+    : (a, b) => a - b);
+}
 function renderTeam(body) {
-  const caught = Object.keys(DEX.caught).map(Number).sort((a, b) => a - b);
+  const f = TEAM_F, opt = (v, l, cur) => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>';
   body.innerHTML = '<div class="dx-dialog">Ton jardin accueille jusqu\'à 6 Pokémon. Les Pokémon aquatiques nagent dans la mare (deux au maximum).</div>' +
-    '<div class="dx-team">' + [0, 1, 2, 3, 4, 5].map(i => {
+    '<div class="dx-team"></div>' +
+    '<div class="dx-filt">' +
+      '<input class="dx-q" type="search" placeholder="🔍 Chercher un Pokémon (nom ou n°)" value="' + esc(f.q) + '">' +
+      '<select data-f="reg">' + opt('', '🗺 Toutes régions', f.reg) + REGIONS.map(r => opt(r[0], r[0], f.reg)).join('') + '</select>' +
+      '<select data-f="tier">' + opt('', '⭐ Toutes raretés', f.tier) + TIERS.map(t => opt(t, TIER_LABEL[t], f.tier)).join('') + '</select>' +
+      '<select data-f="el">' + opt('', '🏷 Tous types', f.el) + Object.entries(EL_LABEL).map(([k, l]) => opt(k, l, f.el)).join('') + '</select>' +
+      '<select data-f="sort">' + [['recent', '↓ Récents'], ['num', '↓ N° Pokédex'], ['name', '↓ Nom'], ['rare', '↓ Plus rares'], ['count', '↓ Plus d\'exemplaires']].map(([v, l]) => opt(v, l, f.sort)).join('') + '</select>' +
+      '<label class="dx-only"><input type="checkbox" data-f="out"' + (f.out ? ' checked' : '') + '> Pas encore au jardin</label>' +
+    '</div><h4 class="dx-count"></h4><div class="dx-pick"></div>' +
+    '<button class="dx-goto">🌳 Aller voir le jardin</button>';
+  const slots = body.querySelector('.dx-team'), pickEl = body.querySelector('.dx-pick'), cnt = body.querySelector('.dx-count');
+  const drawSlots = () => {
+    slots.innerHTML = [0, 1, 2, 3, 4, 5].map(i => {
       const id = DEX.team[i];
       return id ? '<div class="dx-slot" data-rm="' + id + '">' + imgTag(id, 'front', 'mid') + '<b>' + esc(dexName(id)) + '</b><small>retirer</small></div>' : '<div class="dx-slot empty">vide</div>';
-    }).join('') + '</div>' +
-    '<h4>Tes Pokémon (' + caught.length + ')</h4><div class="dx-pick">' + caught.map(id => '<button data-add="' + id + '" class="' + (DEX.team.includes(id) ? 'in' : '') + '">' + imgTag(id, 'icon') + '<span>' + esc(dexName(id)) + '</span></button>').join('') + '</div>' +
-    '<button class="dx-goto">🌳 Aller voir le jardin</button>';
-  body.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.rm); renderDex(); });
-  body.querySelectorAll('[data-add]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.add); renderDex(); });
+    }).join('');
+    slots.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.rm); drawSlots(); drawList(); });
+  };
+  let shown = 0;
+  const drawList = (more) => {
+    const list = teamList(), total = caughtCount();
+    shown = more ? shown + 120 : Math.max(120, shown);
+    cnt.textContent = list.length === total ? 'Tes Pokémon (' + total + ')' : list.length + ' sur ' + total + ' Pokémon';
+    pickEl.innerHTML = list.slice(0, shown).map(id => '<button data-add="' + id + '" class="' + (DEX.team.includes(id) ? 'in' : '') + '" title="#' + id + ' · ' + TIER_LABEL[TIER_OF[id]] + ' · ×' + DEX.caught[id] + '">' +
+      imgTag(id, 'icon') + '<span>' + esc(dexName(id)) + '</span><i style="background:' + TIER_COLOR[TIER_OF[id]] + '"></i></button>').join('') +
+      (list.length > shown ? '<button class="dx-more">Voir plus (' + (list.length - shown) + ')</button>' : '') +
+      (!list.length ? '<div class="dx-hint">Aucun Pokémon ne correspond.</div>' : '');
+    pickEl.querySelectorAll('[data-add]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.add); drawSlots(); el.classList.toggle('in', DEX.team.includes(+el.dataset.add)); if (f.out) drawList(); });
+    const m = pickEl.querySelector('.dx-more'); if (m) m.onclick = () => drawList(true);
+  };
+  drawSlots(); drawList();
+  body.querySelector('.dx-q').oninput = e => { f.q = e.target.value; shown = 0; drawList(); };
+  body.querySelectorAll('select[data-f]').forEach(el => el.onchange = () => { f[el.dataset.f] = el.value; shown = 0; drawList(); });
+  body.querySelector('input[data-f="out"]').onchange = e => { f.out = e.target.checked; shown = 0; drawList(); };
   body.querySelector('.dx-goto').onclick = () => { closeDex(); focusTiles(-8, 27, 14, 28); };
 }
 

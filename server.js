@@ -320,7 +320,7 @@ function allowed(req) {
 const STATIC = {
   '/': ['index.html', 'text/html'], '/index.html': ['index.html', 'text/html'],
   '/world.js': ['world.js', 'text/javascript'], '/features.js': ['features.js', 'text/javascript'], '/rooms.js': ['rooms.js', 'text/javascript'], '/events.js': ['events.js', 'text/javascript'], '/ui.js': ['ui.js', 'text/javascript'], '/pokemon.js': ['pokemon.js', 'text/javascript'], '/talk.js': ['talk.js', 'text/javascript'], '/dex.js': ['dex.js', 'text/javascript'], '/dexdata.js': ['dexdata.js', 'text/javascript'], '/badges.js': ['badges.js', 'text/javascript'], '/tiles.js': ['tiles.js', 'text/javascript'],
-  '/assets/tiles-exterieur-redvoxel.png': ['assets/tiles-exterieur-redvoxel.png', 'image/png'], '/assets/tiles-interieur-bonsaiheldin.png': ['assets/tiles-interieur-bonsaiheldin.png', 'image/png'], '/gacha.js': ['gacha.js', 'text/javascript']
+  '/assets/tiles-exterieur-redvoxel.png': ['assets/tiles-exterieur-redvoxel.png', 'image/png'], '/assets/tiles-interieur-bonsaiheldin.png': ['assets/tiles-interieur-bonsaiheldin.png', 'image/png'], '/gacha.js': ['gacha.js', 'text/javascript'], '/wild.js': ['wild.js', 'text/javascript']
 };
 
 const server = http.createServer(async (req, res) => {

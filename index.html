@@ -205,7 +205,65 @@ img.nf{visibility:hidden}
 .dx-pick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .dx-pick button{background:#fff;color:var(--ink);display:flex;align-items:center;gap:4px;padding:2px 8px 2px 2px;font-size:12px}
 .dx-pick button img{width:40px;height:30px;image-rendering:pixelated}
-.dx-pick button.in{background:#d8f2d0}
+.dx-pick button.in{background:#d8f2d0;box-shadow:inset 0 0 0 2px #5fae5a,0 2px 0 var(--ink)}
+.dx-pick button{position:relative}.dx-pick button i{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%}
+.dx-pick .dx-more{padding:6px 12px;background:var(--blue);color:#fff}
+.dx-filt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.dx-filt .dx-q{flex:1 1 220px;min-width:0;font:600 13px var(--pix);padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink)}
+.dx-filt select{font:600 12px var(--pix);padding:5px 6px;border:2px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink)}
+.dx-filt .dx-only{margin:0}
+/* combat sauvage, façon Rouge Feu / Vert Feuille */
+#battle{position:fixed;inset:0;z-index:70;background:rgba(10,12,20,.82);display:flex;align-items:center;justify-content:center}
+#battle[hidden]{display:none}
+#battle .bt{position:relative;width:min(780px,96vw,calc(94vh * 1.5));aspect-ratio:3/2;overflow:hidden;border:4px solid var(--ink);border-radius:10px;
+  background:linear-gradient(180deg,#f8f8e0 0%,#e0f4c8 30%,#c8ecb0 52%,#b0e098 70%);font-family:var(--pix);box-shadow:0 10px 40px rgba(0,0,0,.5);user-select:none}
+#battle .bt::before{content:"";position:absolute;inset:0 0 30% 0;background:repeating-linear-gradient(180deg,transparent 0 14px,rgba(255,255,255,.18) 14px 16px)}
+.bt-plat{position:absolute;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#d8f0a8 0 45%,#98d070 46% 70%,#70b050 71%);box-shadow:0 3px 0 rgba(40,90,30,.35)}
+.bt-plat.foe{left:52%;top:36%;width:40%;height:12%}
+.bt-plat.me{left:-4%;top:64%;width:50%;height:14%}
+.bt-mon{position:absolute;image-rendering:pixelated;transform-origin:50% 100%}
+.bt-mon.foe{left:72%;top:42%;translate:-50% -100%}
+.bt-mon.me{left:21%;top:76%;translate:-50% -100%}
+.bt-mon.flipx{scale:-1 1}
+#battle.intro .bt-mon.foe{left:-30%}#battle.intro .bt-mon.me{left:130%}
+#battle .bt-mon{transition:left .9s cubic-bezier(.2,.8,.3,1)}
+#battle:not(.sent) .bt-mon.me{filter:brightness(0) opacity(.0)}
+#battle.sent .bt-mon.me{animation:bt-pop .4s ease-out}
+@keyframes bt-pop{from{transform:scale(.2);filter:brightness(6)}to{transform:scale(1);filter:none}}
+.bt-box{position:absolute;background:#f8f8e8;border:3px solid #384850;border-radius:6px 14px 6px 14px;padding:5px 12px 7px;box-shadow:3px 3px 0 rgba(56,72,80,.35);transition:opacity .4s}
+.bt-box.foe{left:4%;top:7%;width:42%}
+.bt-box.me{right:4%;top:47%;width:44%}
+#battle.intro .bt-box,#battle:not(.sent) .bt-box.me{opacity:0}
+.bt-nm{display:flex;justify-content:space-between;align-items:baseline;font:700 clamp(13px,2.4vw,19px) var(--pix);color:#283038}
+.bt-nm span{font-size:.85em}
+.bt-hp{display:flex;align-items:center;gap:6px;margin-top:3px;background:#484848;border-radius:5px;padding:2px 4px 2px 6px}
+.bt-hp small{color:#f8c030;font:700 11px var(--pix)}
+.bt-hp div{flex:1;height:8px;background:#fff;border-radius:3px;overflow:hidden;border:1px solid #303030}
+.bt-hp i{display:block;height:100%;width:100%;background:#58d080;transition:width .6s ease,background .3s}
+.bt-hpn{text-align:right;font:700 clamp(12px,2vw,16px) var(--pix);color:#283038;margin-top:2px}
+.bt-bottom{position:absolute;left:0;right:0;bottom:0;height:30%;background:#283850;border-top:4px solid var(--ink);display:flex;padding:8px;gap:8px;cursor:pointer}
+.bt-text{flex:1;background:#f8f8f8;border:4px solid #c85838;border-radius:8px;box-shadow:inset 0 0 0 3px #f0d0a0;padding:10px 16px;font:600 clamp(14px,2.6vw,21px)/1.35 var(--pix);color:#303030;position:relative}
+.bt-text.more::after{content:"▼";position:absolute;right:12px;bottom:6px;color:#c85838;font-size:14px;animation:bt-bob .6s steps(2) infinite}
+@keyframes bt-bob{50%{transform:translateY(3px)}}
+.bt-menu{flex:0 0 44%;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#f8f8f8;border:4px solid #384850;border-radius:8px;padding:6px}
+.bt-menu[hidden]{display:none}
+.bt-menu button{background:transparent;color:#303030;border:0;box-shadow:none;text-align:left;font:700 clamp(13px,2.4vw,19px) var(--pix);padding:2px 4px 2px 20px;position:relative;border-radius:4px;display:flex;flex-direction:column;justify-content:center}
+.bt-menu button small{font-size:10px;font-weight:600;color:#788}
+.bt-menu button:hover:not(:disabled){background:#e8f0f8}
+.bt-menu button:hover:not(:disabled)::before{content:"▶";position:absolute;left:4px;top:50%;translate:0 -50%;font-size:12px}
+.bt-menu button:disabled{color:#b0b0b0}
+.bt-menu.balls{grid-template-columns:1fr 1fr 1fr;flex-basis:58%}
+.bt-fx{position:absolute;inset:0;pointer-events:none}
+.bt-ball{position:absolute;width:46px;height:46px;left:18%;top:72%;transform:translate(-50%,-50%)}
+.bt-star{position:absolute;width:10px;height:10px;background:#fff6a0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:bt-star 1.2s ease-out forwards;opacity:0}
+@keyframes bt-star{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1.6) rotate(45deg)}100%{opacity:0;transform:scale(.4) rotate(120deg) translateY(-20px)}}
+.bt-wipe{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:repeating-linear-gradient(180deg,#101018 0 10%,transparent 10% 20%)}
+#battle.intro .bt-wipe{animation:bt-flash 1.1s steps(1) forwards}
+@keyframes bt-flash{0%,30%,60%{opacity:0;background:#fff}15%,45%{opacity:1;background:#101018}75%{opacity:1;background:repeating-linear-gradient(180deg,#101018 0 10%,transparent 10% 20%)}100%{opacity:1;background:#101018}}
+#battle.go .bt-wipe{animation:bt-open .5s ease-out forwards}
+@keyframes bt-open{from{opacity:1;background:#101018}to{opacity:0;background:#101018}}
+#battle.out .bt{animation:bt-close .45s ease-in forwards}
+@keyframes bt-close{to{opacity:0;transform:scale(.96)}}
 @media (max-width:700px){.dx-team{grid-template-columns:repeat(3,1fr)}}
 /* Pokédex : écran de lancement de la roue */
 .dx-launch{position:relative;overflow:hidden;text-align:center;padding:16px 12px 14px;border:3px solid var(--ink);border-radius:12px;margin-bottom:12px;
@@ -413,6 +471,7 @@ body.noaside.chatting aside{display:flex}
 <script src="dex.js"></script>
 <script src="gacha.js"></script>
 <script src="badges.js"></script>
+<script src="wild.js"></script>
 <script src="events.js"></script>
 <script>
 'use strict';

@@ -511,14 +511,20 @@ HOOKS.floor.push(t => {
 });
 // hautes herbes : elles recouvrent le bas des persos (comme dans Pokémon) et bougent quand on passe
 const tallBusy = (cx, cy) => [...everyone(), ...cats, ...(typeof MONS !== 'undefined' ? MONS : [])].some(o => Math.floor(o.x) === cx && Math.floor(o.y) === cy);
-for (let y = TALL.y0; y < TALL.y1; y++) for (let x = TALL.x0; x < TALL.x1; x++) furniture.push({ k: py(y) + 12, draw(t) {
-  const x0 = px(x), y0 = py(y), wig = tallBusy(x, y) ? (Math.floor(t * 8) % 2 ? 1 : -1) : 0;
-  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
-    const bx = x0 + i * 8, by = y0 + 3 + j * 7;
-    R(bx, by + 2, 8, 6, '#2f7a3a');
-    R(bx + 1 + wig, by, 2, 6, '#5fb85a'); R(bx + 4, by - 1, 2, 7, '#4fa858'); R(bx + 6 - wig, by + 1, 2, 5, '#5fb85a');
-    R(bx + 1 + wig, by, 1, 1, '#a6e08a'); R(bx + 4, by - 1, 1, 1, '#a6e08a');
+const TUFT = ['.O...O.', 'OHO.OLO', 'OLO.OMO', 'OLMOMDO', 'OMMMMDO', 'ODMMDDO', '.ODDDO.'];
+const TUFT_PAL = { O: '#1f5a2a', D: '#2e7d36', M: '#45a848', L: '#6cc75a', H: '#a8ec84' };
+function tuft(bx, by, wig) {
+  for (let r = 0; r < TUFT.length; r++) {
+    const row = TUFT[r], dx = r < 3 ? wig : 0;
+    for (let c = 0; c < row.length; c++) if (row[c] !== '.') R(bx + c + dx, by + r, 1, 1, TUFT_PAL[row[c]]);
   }
+}
+for (let y = TALL.y0; y < TALL.y1; y++) for (let x = TALL.x0; x < TALL.x1; x++) furniture.push({ k: py(y) + 12, draw(t) {
+  const x0 = px(x), y0 = py(y);
+  const wild = typeof WILD !== 'undefined' && WILD.cell && WILD.cell[0] === x && WILD.cell[1] === y && !BT;
+  const wig = wild ? (Math.floor(t * 14) % 3) - 1 : tallBusy(x, y) ? (Math.floor(t * 8) % 2 ? 1 : -1) : 0;
+  R(x0, y0 + 6, 16, 9, '#2e7d36');
+  tuft(x0, y0 + 1, wig); tuft(x0 + 8, y0 + 1, -wig); tuft(x0 + 4, y0 + 8, wig); if (x > TALL.x0) tuft(x0 - 4, y0 + 8, -wig);
 } });
 // boîte aux lettres : le drapeau se lève quand les agents s'écrivent
 const MAILBOX = { up: 0 };

@@ -181,7 +181,7 @@ DESKS.forEach(d => { block(d.dx, d.dy); block(d.dx + 1, d.dy); block(d.dx, d.dy 
 for (let x = 23; x < 29; x++) block(x, 3);                                 // comptoir + frigo
 for (let i = 0; i < SOFA.n; i++) block(SOFA.x + i, SOFA.y);
 [[13, 3], [14, 3], [15, 3], [21, 3], [0, 11], [0, 13], [21, 13],
- [30, 3], [31, 3], [31, 9], [31, 10], [30, 9], [30, 10], [29, 10], [30, 11], [26, 12], [27, 12], [26, 13], [27, 13], [23, 13], [31, 13]]
+ [30, 3], [31, 3], [30, 11], [26, 12], [27, 12], [26, 13], [27, 13], [23, 13], [31, 13]]
   .forEach(c => block(...c));
 
 /* ---------- fond statique ---------- */
@@ -741,34 +741,6 @@ furniture.push({ // distributeur de snacks, même gabarit que le frigo
     R(x0 + 2, bot - 3, w - 4, 2, '#cfc7b8');
   }
 });
-furniture.push({ // piano droit, de profil contre le mur de droite (clavier côté pianiste)
-  k: py(10) + 2, draw(t) {
-    const x0 = px(31) + 4, w = 11, top = py(9) - 10, face = py(11) - 13, bot = py(11) - 2;
-    const playing = someone(a => a.mode === 'sit' && a.seat && a.seat.type === 'piano');
-    R(x0 - 6, bot, w + 7, 2, SHADOW);
-    panel(x0, top, w, face - top, '#4a3428'); R(x0, top, w, 1, '#6b4c3a'); R(x0 + w - 2, top + 1, 1, face - top - 1, '#3a2a22');
-    panel(x0, face, w, bot - face, '#3a2a22'); R(x0 + 2, face + 2, w - 4, bot - face - 4, '#47332a');
-    R(x0 + 3, bot - 2, 2, 1, AMBER); R(x0 + 6, bot - 2, 2, 1, AMBER);                        // pédales
-    // clavier, vu de dessus, qui dépasse côté gauche
-    const ky = py(9) + 4, kh = 24;
-    panel(x0 - 6, ky, 6, kh, '#3a2a22');
-    R(x0 - 6, ky, 5, kh, '#f6f2ea');
-    for (let y = ky + 2; y < ky + kh; y += 3) R(x0 - 6, y, 5, 1, '#c9c2b4');
-    for (let y = ky + 1, i = 0; y < ky + kh - 1; y += 3, i++) if (i % 7 !== 2 && i % 7 !== 6) R(x0 - 3, y, 2, 2, '#1e1a18');
-    if (playing) for (let i = 0; i < 3; i++) { const k = Math.floor(t * 6 + i * 3.7) % 8; R(x0 - 6, ky + k * 3, 2, 2, '#e8d0a8'); }
-    // partition + métronome sur le dessus
-    panel(x0 + 2, top + 3, 6, 7, CREAM); R(x0 + 3, top + 5, 4, 1, '#9b958a'); R(x0 + 3, top + 7, 3, 1, '#9b958a');
-    panel(x0 + 3, top + 14, 4, 5, '#a8754f'); R(x0 + 5, top + 14 - (playing ? Math.floor(t * 4) % 2 : 0), 1, 3, '#e9e2d4');
-  }
-});
-furniture.push({ // tabouret du pianiste (sous lui)
-  k: py(10) + 3, draw() {
-    const x0 = px(30) + 3, y0 = py(10) + 1;
-    R(x0, y0 + 7, 11, 2, SHADOW);
-    panel(x0, y0, 10, 3, '#3a2a22'); R(x0, y0, 10, 1, '#5a4033');
-    R(x0 + 1, y0 + 4, 1, 4, '#2a1e18'); R(x0 + 8, y0 + 4, 1, 4, '#2a1e18');
-  }
-});
 furniture.push({ // télé face au canapé (on voit son dos, l'écran éclaire la pièce)
   k: py(14) - 1, draw(t) {
     const x0 = px(26) + 1, w = 30, y0 = py(13) + 3;
@@ -800,15 +772,6 @@ furniture.push({ // canapé, tourné vers nous
     [2, w - 4].forEach(dx => { R(x0 + dx, y0 + 22, 3, 3, FOUT); R(x0 + dx + 1, y0 + 22, 1, 2, WOOD.md); });
     panel(x0 + 2, y0 + 4, 8, 7, CLAY); R(x0 + 4, y0 + 7, 4, 1, CLAY2);
     panel(x0 + w - 10, y0 + 4, 8, 7, CREAM); spark(x0 + w - 6, y0 + 7, 1, CLAY);
-  }
-});
-furniture.push({ // guitare posée sur son support (quand personne n'en joue)
-  k: py(SOFA.y) + 14, draw() {
-    if (someone(a => a.act === 'guitar' && a.mode === 'sit')) { R(px(29) + 6, py(10) + 10, 5, 4, '#3a2a22'); return; }
-    const cx = px(29) + 8, by = py(10) + 13;
-    R(cx - 3, by, 7, 1, '#3a2a22');
-    panel(cx - 3, by - 8, 7, 7, '#c9853e', OUT); R(cx - 1, by - 6, 2, 2, '#4a2e1c'); R(cx - 3, by - 8, 7, 1, '#dda05a');
-    R(cx, by - 18, 1, 10, '#6e4c38'); panel(cx - 1, by - 21, 3, 3, '#3a2a22', OUT);
   }
 });
 furniture.push({ // table basse
@@ -1114,8 +1077,7 @@ function pickActivity(a, now) {
   }
   const opts = [];
   const si = freeSofa(a);
-  if (si != null) opts.push([18, () => { const act = pick(['guitar', 'guitar', 'tv', 'tv', 'book', 'phone']); goTo(a, sofaSeat(si).cell, Object.assign(sofaSeat(si), { act, label: ACT_LABEL[act] })); }]);
-  if (!seatUsed(a, s => s.type === 'piano')) opts.push([12, () => goTo(a, [30, 9], { type: 'piano', act: 'piano', label: ACT_LABEL.piano })]);
+  if (si != null) opts.push([18, () => { const act = pick(['tv', 'tv', 'book', 'phone']); goTo(a, sofaSeat(si).cell, Object.assign(sofaSeat(si), { act, label: ACT_LABEL[act] })); }]);
   if (!seatUsed(a, s => s.type === 'beanbag')) opts.push([6, () => { const act = pick(['phone', 'book']); goTo(a, [30, 11], { type: 'beanbag', act, label: ACT_LABEL[act] }); }]);
   SPOTS.forEach(sp => {
     const busy = everyone().some(o => o !== a && ((o.heading && o.heading.cell === sp.cell) || (!o.path.length && !o.seat && cellOf(o)[0] === sp.cell[0] && cellOf(o)[1] === sp.cell[1])));
@@ -1296,45 +1258,47 @@ function catKey(c) {
   if (c.spot && c.spot.tree && !c.path.length) return py(8) + 12.5;
   return py(c.y) + 7;
 }
+// chats en sprites ombrés, même style que les persos (tournés vers la droite, retournés si besoin)
+const CAT_SPR = {
+  walk: [[
+    '..........O...O.', '.........OIO.OIO', '..O......ObbbbbO', '.ObO.....ObSBBBO', '.OBO.OOOOOBBEBEO', '..OBObbSbSBBBBNO',
+    '..OBBBSBSBBBDBO.', '...OBBBBBBBBDDO.', '...ODBBBBBBBDO..', '...ODDDDDDDDDO..', '...OBO..OBOOBO..', '...OOO..OOOOOO..'
+  ], [
+    '..........O...O.', '.........OIO.OIO', '.O.......ObbbbbO', 'ObO......ObSBBBO', 'OBO..OOOOOBBEBEO', '.OBOObbSbSBBBBNO',
+    '..OBBBSBSBBBDBO.', '...OBBBBBBBBDDO.', '...ODBBBBBBBDO..', '...ODDDDDDDDDO..', '....OBOOBO.OBO..', '....OOOOOO.OOO..'
+  ]],
+  sit: [
+    '.O.....O...', 'OIO...OIO..', 'ObbbSbbbO..', 'ObBBSBBBO..', 'OBEWBEWBO..', 'OBEEBEEBO..', 'ODBBNBBDO..',
+    '.ODBBBDO...', '.OBbbbBO...', 'OBSbbbSBO..', 'OBBbbbBBO.O', 'OBSBBBSBOBO', 'ODBOBOBDDO.', '.OOOOOOOOO.'
+  ],
+  sleep: [
+    '..........O..O.', '....OOOOOOIOOIO', '..OObbSbSObbbbO', '.ObBBBSBSBBBBBO', 'OBBBBBBBBBOOBOO', 'OBbbbbbbbbBBNBO',
+    'ODDDDDDDDDDDDO.', '.OOOOOOOOOOOOO.'
+  ]
+};
+function catPal(c) {
+  if (!c._pal) c._pal = { O: c.ol, B: c.col, b: mix(c.col, '#ffffff', 0.28), D: mix(c.col, '#000000', 0.3), S: c.stripe || mix(c.col, '#000000', 0.12),
+    E: c.eye, W: '#ffffff', N: '#e88a9a', I: '#e8a0a0' };
+  return c._pal;
+}
 function drawCat(c, t) {
-  const big = c.big, bw = big ? 13 : 10, bh = big ? 6 : 4, hw = big ? 7 : 6, hh = big ? 6 : 5;
-  const x = px(c.x), fy = py(c.y) + 7, y = fy - c.z, d = c.dir, col = c.col, ol = c.ol;
-  const stripes = (x0, y0, w, h) => { if (c.stripe) for (let i = 2; i < w - 1; i += 3) R(x0 + i, y0, 1, h, c.stripe); };
-  R(x - (bw >> 1), y - 1, bw, 2, 'rgba(40,25,10,.2)');
-  let hx, hy;
-  if (c.mode === 'sleep') {                                    // en boule
-    const breath = (t * 0.6) % 1 < 0.5 ? 0 : 1, w = bw + 1, h = bh + 1 + breath;
-    panel(x - (w >> 1), y - h, w, h, col, ol); stripes(x - (w >> 1), y - h, w, h - 1);
-    R(x - (w >> 1), y - 2, w, 1, shade(col, -0.18));          // la queue qui fait le tour
-    hx = d > 0 ? x + (w >> 1) - hw + 2 : x - (w >> 1) - 2; hy = y - hh;
-    panel(hx, hy, hw, hh - 1, col, ol); stripes(hx, hy, hw, 2);
-    R(hx, hy - 2, 1, 2, col); R(hx + hw - 1, hy - 2, 1, 2, col);
-    R(d > 0 ? hx + hw - 3 : hx + 1, hy + 2, 2, 1, ol);        // yeux fermés
-    const p = (t * 0.4 + (big ? 0.5 : 0)) % 1;                 // petits z
+  const x = px(c.x), fy = py(c.y) + 7, y = fy - c.z, d = c.dir, pal = catPal(c), flip = d < 0;
+  R(x - 7, y - 1, 14, 2, 'rgba(40,25,10,.2)');
+  if (c.mode === 'sleep') {                                    // en boule, qui respire
+    const breath = (t * 0.6) % 1 < 0.5 ? 0 : 1, rows = CAT_SPR.sleep.slice();
+    if (breath) rows.splice(1, 0, rows[2]);
+    drawSprite(rows, x, y, pal, flip);
+    const hx = flip ? x - 6 : x + 4, hy = y - rows.length;
+    const p = (t * 0.4 + (c.big ? 0.5 : 0)) % 1;                 // petits z
     g.globalAlpha = 1 - p; R(hx + 2, hy - 5 - Math.round(p * 8), 3, 1, '#f5efe3'); R(hx + 3, hy - 4 - Math.round(p * 8), 1, 1, '#f5efe3'); R(hx + 2, hy - 3 - Math.round(p * 8), 3, 1, '#f5efe3'); g.globalAlpha = 1;
-  } else if (c.mode === 'sit') {                              // assis de profil
-    const w = big ? 8 : 6, h = big ? 9 : 7;
-    panel(x - (w >> 1), y - h, w, h, col, ol); stripes(x - (w >> 1), y - h, w, h - 2);
-    R(d > 0 ? x + (w >> 1) - 2 : x - (w >> 1), y - h + 2, 2, h - 3, c.hi);
-    const tw = Math.round(Math.sin(t * 2) * 1);
-    R(d > 0 ? x - (w >> 1) - 4 : x + (w >> 1), y - 1, 4, 1, col); R(d > 0 ? x - (w >> 1) - 4 : x + (w >> 1) + 3, y - 3 + tw, 1, 2, col);
-    hx = x - (hw >> 1) + d; hy = y - h - hh + 2;
-    panel(hx, hy, hw, hh, col, ol); stripes(hx, hy, hw, 2);
-  } else {                                                     // marche
-    const f = Math.floor(t * 9) % 2, bx0 = x - (bw >> 1), top = y - 2 - bh;
-    [[1, f], [3, 1 - f], [bw - 4, 1 - f], [bw - 2, f]].forEach(([lx, up]) => R(bx0 + lx, y - 2, 1, 2 - up, shade(col, -0.15)));
-    panel(bx0, top, bw, bh, col, ol); stripes(bx0, top, bw, bh - 1); R(bx0 + 1, top + bh - 1, bw - 2, 1, c.hi);
-    const tx = d > 0 ? bx0 - 1 : bx0 + bw, wag = Math.round(Math.sin(t * 6));
-    R(tx, top - 3, 1, 4, col); R(tx - d, top - 4 + wag, 1, 2, col);
-    hx = d > 0 ? bx0 + bw - 3 : bx0 - hw + 3; hy = top - hh + 3;
-    panel(hx, hy, hw, hh, col, ol); stripes(hx, hy, hw, 2);
-  }
-  if (c.mode !== 'sleep') {
-    R(hx, hy - 2, 1, 2, col); R(hx + hw - 1, hy - 2, 1, 2, col); R(hx, hy - 3, 1, 1, ol); R(hx + hw - 1, hy - 3, 1, 1, ol);
-    const blink = Math.floor(t * 0.5 + (big ? 0.3 : 0)) % 6 === 0;
-    const ex = d > 0 ? hx + hw - 2 : hx + 1;
-    R(ex, hy + 1, 1, blink ? 1 : 2, blink ? ol : c.eye); R(ex - d * 2, hy + 1, 1, blink ? 1 : 2, blink ? ol : c.eye);
-    R(d > 0 ? hx + hw - 1 : hx, hy + 3, 1, 1, '#e79a9a');
+  } else if (c.mode === 'sit') {                              // assis, la queue qui bouge
+    let rows = CAT_SPR.sit;
+    if (Math.floor(t * 0.5 + (c.big ? 0.3 : 0)) % 6 === 0) rows = rows.map((r, i) => i === 4 ? 'OBBBBBBBO..' : i === 5 ? 'OBOOBOOBO..' : r);   // clignement
+    if (Math.sin(t * 2) > 0.3) rows = rows.map((r, i) => i === 10 ? r.slice(0, 9) + 'O.' : i === 9 ? r.slice(0, 9) + '.O' : r);
+    drawSprite(rows, x, y, pal, flip);
+  } else {                                                     // marche, deux images
+    const f = Math.floor(t * 9 + (c.big ? 0.5 : 0)) % 2;
+    drawSprite(CAT_SPR.walk[f], x, y - f, pal, flip);
   }
   if (c.petUntil > performance.now()) {                        // cœurs quand on le caresse
     for (let i = 0; i < 2; i++) {

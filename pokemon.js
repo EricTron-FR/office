@@ -237,19 +237,6 @@ HOOKS.update.push((dt, now) => {
   }
   cats.forEach(c => { if (!c.catPlay && c.baseSpeed && !c.playUntil && !c.zoomUntil && !c.chasing) c.speed = c.baseSpeed; });
 });
-// de temps en temps, un Pokémon sauvage surgit des hautes herbes
-let wildTick = performance.now() + 90000;
-HOOKS.update.push((dt, now) => {
-  if (now < wildTick) return; wildTick = now + 240000 + Math.random() * 300000;
-  if (badWeather() || night()) return;
-  const m = pick(MONS.filter(m => !m.water && !m.path.length && m.mode !== 'sleep' && m.playUntil < now));
-  if (!m) return;
-  m.x = TALL.x0 + 0.5 + Math.floor(Math.random() * (TALL.x1 - TALL.x0)); m.y = TALL.y0 + 0.5 + Math.floor(Math.random() * (TALL.y1 - TALL.y0));
-  m.mode = 'idle'; m.label = 'Surgit des hautes herbes !'; m.next = now + 5000;
-  emote(m, '❗', 2500);
-  if (typeof say === 'function') say(m, m.cry, { mon: true });
-  news('🌿', 'Un ' + m.name + ' sauvage apparaît dans les hautes herbes !');
-});
 
 /* ---------- dessin ---------- */
 const dir8 = (dx, dy) => (((Math.round((90 - Math.atan2(dy, dx) * 180 / Math.PI) / 45)) % 8) + 8) % 8;
