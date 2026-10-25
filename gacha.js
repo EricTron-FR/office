@@ -97,9 +97,9 @@ function ballCanvas(ball, size) {
   const cv2 = document.createElement('canvas'); cv2.width = cv2.height = size * 2; cv2.className = 'g-ball';
   const cc = cv2.getContext('2d'); cc.scale(2, 2); ballIcon(cc, size / 2, size / 2, size / 2 - 6, ball); return cv2;
 }
-// ball : la Ball gagnée ; result : { id, tier, isNew, candy } ; onEnd(action) : 'again' | 'dex' | 'ok'
+// ball : la Ball gagnée ; result : { id, tier, isNew, coins } ; onEnd(action) : 'again' | 'dex' | 'ok'
 async function gachaShow(ball, result, onEnd) {
-  const { id, tier, isNew, candy } = result, color = TIER_COLOR[tier], legend = tier === 'legendaire', big = tier === 'epique' || legend;
+  const { id, tier, isNew, coins } = result, color = TIER_COLOR[tier], legend = tier === 'legendaire', big = tier === 'epique' || legend;
   G = { skip: false, timers: [], click: null };
   $g.querySelector('.g-skip').style.display = '';
   $g.hidden = false; $g.className = 'g-on t-' + tier; gResize(); PARTS.length = 0; cancelAnimationFrame(gRaf); gLoop();
@@ -150,7 +150,7 @@ async function gachaShow(ball, result, onEnd) {
     '<div class="g-num">N° ' + String(id).padStart(3, '0') + '</div><div class="g-name"></div>' +
     '<div class="g-stars">' + '★★★★★'.split('').map((s, i) => '<span class="' + (i < STARS[tier] ? 'lit' : '') + '">★</span>').join('') + '</div>' +
     '<div class="g-tier" style="background:' + color + '">' + TIER_LABEL[tier] + ' · taux de capture ' + CAPTURE[id - 1] + '</div>' +
-    (isNew ? '<div class="g-new">NOUVEAU !</div>' : '<div class="g-dup">Déjà attrapé · +' + candy + ' 🍬</div>') +
+    (isNew ? '<div class="g-new">NOUVEAU !</div>' : '<div class="g-dup">Déjà attrapé · +' + coins + ' 🪙</div>') +
     '<div class="g-btns"></div></div>';
   const rv = $gstage.querySelector('.g-reveal');
   await wait(250);
@@ -183,3 +183,77 @@ async function gachaShow(ball, result, onEnd) {
   btns.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { closeGacha(); onEnd && onEnd(b.dataset.g); });
 }
 function closeGacha() { $g.hidden = true; cancelAnimationFrame(gRaf); PARTS.length = 0; gAmbient = null; gShake = 0; $grays.classList.remove('on'); G = null; }
+
+/* ---------- rafale ×5 / ×10 : toutes les Balls d'un coup, ouvertes une par une ---------- */
+async function gachaMulti(items, onEnd) {
+  const n = items.length, order = TIERS;
+  const best = items.reduce((b, it) => order.indexOf(it.tier) > order.indexOf(b.tier) ? it : b, items[0]);
+  G = { skip: false, timers: [], click: null };
+  $g.querySelector('.g-skip').style.display = '';
+  $g.hidden = false; $g.className = 'g-on g-multi t-commun'; gResize(); PARTS.length = 0; cancelAnimationFrame(gRaf); gLoop();
+  $grays.classList.remove('on');
+  $gstage.innerHTML = '<div class="g-mtitle">' + (n >= 10 ? '🔥 RAFALE ×10' : '⚡ RAFALE ×5') + '</div><div class="g-cards c' + n + '">' +
+    items.map((it, i) => '<div class="g-card" style="animation-delay:' + (i * 70) + 'ms"><div class="g-cglow"></div></div>').join('') +
+    '</div><div class="g-hint">Touche pour tout ouvrir !</div><div class="g-recap"></div>';
+  const cards = [...$gstage.querySelectorAll('.g-card')], hint = $gstage.querySelector('.g-hint');
+  cards.forEach((c, i) => { c.appendChild(ballCanvas(items[i].ball, 84)); });
+  items.forEach((it, i) => gTone(NOTE(84 - (i % 5) * 3), 0.05, 'square', 0.025, i * 0.07));
+  await wait(n * 70 + 650);
+  hint.classList.add('show'); gAmbient = { c: '#ffffff', rate: 0.2 };
+  if (!G.skip) await new Promise(r => { G.click = r; $gstage.querySelector('.g-cards').onclick = r; });
+  G.click = null; hint.classList.remove('show'); gAmbient = null;
+  let fresh = 0, coins = 0;
+  for (let i = 0; i < n; i++) {
+    const it = items[i], card = cards[i], tc = TIER_COLOR[it.tier], T = order.indexOf(it.tier), r = card.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    // petite secousse, la lueur annonce la rareté
+    card.style.setProperty('--tc', tc); card.classList.add('shake');
+    gTone(NOTE(60 + T * 4), 0.06, 'square', 0.04); gNoise(0.04, 0.04, 0, 1500);
+    await wait(T >= 3 ? 650 : 300);
+    // ouverture
+    if (it.isNew) fresh++; else coins += it.coins || 0;
+    card.classList.remove('shake'); card.classList.add('open', 't-' + it.tier);
+    card.innerHTML = '<div class="g-cglow"></div><img src="' + SPRITE.front(it.id) + '" alt=""><b>' + esc(dexName(it.id)) + '</b>' +
+      '<span class="g-cstars">' + '★'.repeat(STARS[it.tier]) + '</span>' + (it.isNew ? '<i class="g-cnew">NEW</i>' : '<i class="g-cdup">+' + (it.coins || 0) + ' 🪙</i>');
+    burst(cx, cy, [14, 20, 34, 70, 140][T], [tc, '#ffffff', T >= 3 ? '#ffe08a' : tc], { speed: 4 + T * 1.6, g: 0.12, size: 4 + T });
+    melody([72 + T * 2, 76 + T * 2, 79 + T * 2].slice(0, 1 + Math.min(2, T)), 0.06);
+    if (T === 3) { gShake = 10; $grays.style.setProperty('--tc', tc); $grays.classList.add('on'); }
+    if (T === 4) {
+      $gflash.classList.remove('go'); void $gflash.offsetWidth; $gflash.classList.add('go');
+      gShake = 22; $grays.style.setProperty('--tc', tc); $grays.classList.add('on'); $g.classList.add('t-legendaire');
+      FANFARE.legendaire(); rain(['#ffe08a', '#f2b23a', '#ffffff', '#ff9a3a'], 120, 'star');
+    }
+    await wait([260, 280, 380, 800, 1700][T]);
+  }
+  // récap
+  G.skip = false;
+  if (order.indexOf(best.tier) < 4) FANFARE[best.tier]();
+  if (fresh) rain(['#ff5f5f', '#ffd166', '#5fe39a', '#5fe8ff', '#ffffff'], 30 + fresh * 8);
+  const recap = $gstage.querySelector('.g-recap');
+  recap.innerHTML = '<div class="g-rline"><b>' + fresh + '</b> nouveau' + (fresh > 1 ? 'x' : '') + ' · <b>+' + coins + '</b> 🪙 · meilleur : <b style="color:' + TIER_COLOR[best.tier] + '">' + esc(dexName(best.id)) + '</b> (' + TIER_LABEL[best.tier] + ')</div>' +
+    '<div class="g-btns show">' + (DEX.tickets >= n ? '<button data-g="again" class="g-again">' + (n >= 10 ? '🔥' : '⚡') + ' Encore ×' + n + ' (' + DEX.tickets + ' 🎟)</button>' : '') +
+    '<button data-g="dex" class="ghost">📕 Pokédex</button><button data-g="ok" class="ghost">OK</button></div>';
+  recap.classList.add('show'); $g.querySelector('.g-skip').style.display = 'none';
+  recap.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { closeGacha(); onEnd && onEnd(b.dataset.g); });
+}
+
+/* ---------- célébrations (badge débloqué, défi réussi) : une à la fois ---------- */
+const CELEB = [];
+let celebOn = false;
+// opts : { title, sub, color, draw(ctx, size) facultatif, reward }
+function celebrate(opts) { CELEB.push(opts); if (!celebOn) nextCeleb(); }
+function nextCeleb() {
+  const o = CELEB.shift();
+  if (!o) { celebOn = false; return; }
+  if (!$g.hidden) { setTimeout(() => { CELEB.unshift(o); nextCeleb(); }, 1200); celebOn = true; return; }   // on attend la fin du gacha
+  celebOn = true;
+  const box = document.createElement('div'); box.className = 'celeb';
+  box.innerHTML = '<div class="cb-rays" style="--tc:' + (o.color || '#ffd166') + '"></div><div class="cb-card"><canvas width="160" height="160"></canvas><div class="cb-title"></div><div class="cb-sub"></div>' +
+    (o.reward ? '<div class="cb-rew">+' + o.reward + ' 🎟</div>' : '') + '<small>clic pour continuer</small></div>';
+  box.querySelector('.cb-title').textContent = o.title; box.querySelector('.cb-sub').textContent = o.sub || '';
+  document.body.appendChild(box);
+  const cc = box.querySelector('canvas').getContext('2d');
+  if (o.draw) o.draw(cc, 160); else { cc.font = '96px "Segoe UI Emoji", sans-serif'; cc.textAlign = 'center'; cc.textBaseline = 'middle'; cc.fillText(o.emoji || '🏅', 80, 86); }
+  melody([67, 72, 76, 79, 84], 0.08); setTimeout(() => melody([79, 84, 88], 0.001, 'square', 0.03), 450);
+  const close = () => { if (!box.parentNode) return; box.classList.add('out'); setTimeout(() => { box.remove(); nextCeleb(); }, 300); };
+  box.onclick = close; setTimeout(close, 5200);
+}

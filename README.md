@@ -12,20 +12,22 @@ Le serveur lit `~/.claude/projects` sans rien y modifier. Il diffuse l'activité
 - **En bas** : le jardin suspendu (mare, hautes herbes, potager, pique-nique, boîte aux lettres) et la bibliothèque.
 
 ## Pokédex
-1. Tes agents gagnent des **tickets** 🎟 quand ils travaillent pour de vrai : un ticket par tâche terminée, un toutes les 40 actions, plus un bonus du jour.
-2. Un ticket = un tour de **roue**. Elle donne une Poké Ball, une Super Ball, une Hyper Ball ou une Master Ball.
-3. Tu ouvres la Ball : tu obtiens un Pokémon de Kanto (151).
-4. La rareté suit le **taux de capture officiel** des jeux :
-   - Commun : ≥ 190
-   - Peu commun : 100 à 189
-   - Rare : 60 à 99
-   - Épique : 50 et moins
-   - Légendaire : légendaires et fabuleux
-5. Chaque Ball a ses propres chances (tableau sous la roue).
-6. Les doublons donnent des bonbons 🍬 : 5 bonbons = 1 ticket.
-7. Tu choisis jusqu'à **6 Pokémon pour le jardin**. Ils s'y baladent, nagent dans la mare, dorment la nuit et jouent avec les agents et les chats.
+- **Tickets** 🎟 : un par tâche terminée par un vrai agent, un toutes les 40 actions, un bonus du jour, plus les badges et les défis.
+- **Roue** : 1 ticket = 1 Ball (Poké, Super, Hyper ou Master Ball), ouverte en grand spectacle.
+- **Rafales** : ×5 ou ×10 (un rare ou mieux garanti à ×10), ouvertes en rafale avec un récapitulatif.
+- **Région** : tu choisis où tirer, parmi les 1025 Pokémon de Kanto à Paldea, ou toutes les régions à la fois.
+- **Rareté** : elle suit le taux de capture officiel des jeux.
+  - Commun : ≥ 190
+  - Peu commun : 100 à 189
+  - Rare : 60 à 99
+  - Épique : 50 et moins
+  - Légendaire : légendaires et fabuleux
+- **Pièces** 🪙 : les doublons en rapportent selon leur rareté (commun 2, peu commun 3, rare 5, épique 15, légendaire 40). À la boutique, on les échange contre un ticket (10), une Super Ball (15), une Hyper Ball (40) ou une Master Ball (150).
+- **Pokédex** : par région, avec le nombre attrapé dans chacune.
+- **Jardin** : jusqu'à 6 Pokémon. Ceux d'eau nagent dans la mare et en sortent parfois. Ils jouent avec les agents et les chats.
+- **Badges & défis** : 20 badges façon arène, débloqués par le travail de tes agents (tâches, actions, nuits, travail en équipe) et par ta collection. Trois défis du jour, plus un bonus si tu fais les trois.
 
-La progression est gardée dans le navigateur (localStorage). Les sprites et la police pixel sont chargés depuis Internet (PokeAPI sur GitHub, Google Fonts).
+La progression est gardée dans le navigateur (localStorage). Les données des Pokémon sont dans `dexdata.js` (générées depuis PokeAPI). Les sprites et la police pixel sont chargés depuis Internet (GitHub, Google Fonts).
 
 ## Les agents se parlent
 - **Bulles manga** : quand un agent ou un sous-agent écrit à un autre, il va le voir et lui parle dans une bulle manga. Ça couvre l'outil `SendMessage` de Claude Code et la messagerie d'équipe du bureau.
@@ -40,7 +42,10 @@ La progression est gardée dans le navigateur (localStorage). Les sprites et la 
 | `world.js` | le monde : pièces, meubles, persos, chats, ciel, météo, zoom |
 | `rooms.js` | jardin suspendu, bibliothèque, terrasse, pluie, interactions |
 | `pokemon.js` | les Pokémon du jardin |
-| `dex.js` | Pokédex : tickets, roue, Balls, collection, équipe du jardin |
+| `dexdata.js` | les 1025 Pokémon : nom, taux de capture, types, évolutions (généré depuis PokeAPI) |
+| `dex.js` | Pokédex : tickets, roue, rafales, régions, pièces, boutique, collection, jardin |
+| `gacha.js` | animations d'ouverture de Ball, de rafale et célébrations |
+| `badges.js` | badges et défis du jour |
 | `talk.js` | bulles manga et conversations entre agents |
 | `features.js` | ambiance : nuit éclairée, laser, chat sur le clavier, employé du jour, pizza, robot, saisons |
 | `events.js` | événements : évacuation, anniversaire, apéro, arc-en-ciel… |

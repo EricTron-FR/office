@@ -207,6 +207,70 @@ img.nf{visibility:hidden}
 .dx-pick button img{width:40px;height:30px;image-rendering:pixelated}
 .dx-pick button.in{background:#d8f2d0}
 @media (max-width:700px){.dx-team{grid-template-columns:repeat(3,1fr)}}
+/* Pokédex : choix de région, rafales, boutique */
+.dx-multi{display:flex;gap:6px}.dx-multi button{flex:1;background:#ff8a3a}.dx-multi .dx-m10{background:#9b6fd6}
+.dx-reg{display:flex;align-items:center;gap:8px;font:600 13px var(--pix)}
+.dx-reg select{font:600 13px var(--pix);border:2px solid var(--ink);border-radius:6px;padding:3px 6px;background:#fff;color:var(--ink)}
+.dx-reg small{color:var(--mute);font-weight:400}
+.dx-shop{background:#fff6d6;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:12px}
+.dx-shop b{font-family:var(--pix)}.dx-shop span{color:var(--mute);margin-left:4px}
+.dx-shop div{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 3px}
+.dx-shop button{background:#fff;color:var(--ink);font-size:11.5px;padding:3px 7px;display:flex;align-items:center;gap:4px}
+.dx-shop small{color:var(--mute)}
+.dx-regions{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.dx-regions button{background:#fff;color:var(--ink);font-size:12px;padding:3px 9px}
+.dx-regions button.on{background:var(--blue);color:#fff}.dx-regions button.full{box-shadow:inset 0 0 0 2px var(--yellow),0 2px 0 var(--ink)}
+.dx-regions small{opacity:.75}
+.dx-only{display:flex;align-items:center;gap:6px;font-size:12px;margin:0 0 8px;cursor:pointer}
+.dx-cell img{object-fit:contain}
+/* badges et défis */
+.bd-daily{display:grid;gap:6px;margin-bottom:6px}
+.bd-ch{display:grid;grid-template-columns:1fr 160px auto;gap:10px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:6px 10px;font:600 13px var(--pix)}
+.bd-ch.done{background:#e3f6dc}
+.bd-bar{position:relative;height:14px;background:#efe8da;border:2px solid var(--ink);border-radius:99px;overflow:hidden}
+.bd-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.bd-bar span{position:absolute;inset:0;text-align:center;font:600 10px/10px var(--pix);color:var(--ink)}
+.bd-rew{font:700 12px var(--pix);color:#b07a10;white-space:nowrap}
+.bd-case{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.bd-badge{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.85}
+.bd-badge canvas{width:64px;height:64px}
+.bd-badge b{font:700 13px var(--pix)}.bd-badge small{font-size:11px;color:var(--mute);min-height:28px}
+.bd-badge em{font-style:normal;font-size:11px;color:#3f8a3a}
+.bd-badge .bd-bar{width:100%}
+.bd-badge.got{opacity:1;background:linear-gradient(#fffdf0,#fff3c8);box-shadow:inset 0 0 0 2px #fff,0 0 0 0 transparent}
+.bd-badge.got canvas{animation:float 2.6s ease-in-out infinite}
+/* rafale */
+#gacha.g-multi .g-stage{justify-content:flex-start;padding-top:4vh}
+.g-mtitle{font:700 30px var(--pix);color:#ffd166;text-shadow:3px 3px 0 #000,0 0 18px #ff8a3a;margin-bottom:14px;animation:banner .6s cubic-bezier(.2,1.8,.4,1)}
+.g-cards{display:grid;grid-template-columns:repeat(5,140px);gap:12px}
+.g-card{position:relative;width:140px;height:178px;border-radius:12px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;animation:cdrop .5s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes cdrop{from{transform:translateY(-60vh) rotate(-30deg);opacity:0}to{transform:none;opacity:1}}
+.g-card canvas.g-ball{width:84px;height:84px}
+.g-card.shake{animation:gshake .3s ease-in-out}
+.g-card.shake .g-cglow,.g-card.open .g-cglow{opacity:1}
+.g-cglow{position:absolute;inset:-10px;border-radius:16px;background:radial-gradient(circle,var(--tc,#fff) 0,transparent 70%);opacity:0;transition:opacity .2s;pointer-events:none}
+.g-card.open{background:rgba(255,255,255,.12);border-color:var(--tc);animation:cflip .35s ease-out}
+@keyframes cflip{from{transform:rotateY(90deg) scale(.8)}to{transform:none}}
+.g-card.t-epique{box-shadow:0 0 22px #9b6fd6}.g-card.t-legendaire{box-shadow:0 0 30px #ffd166;border-width:3px}
+.g-card img{width:96px;height:96px;image-rendering:pixelated;position:relative}
+.g-card b{font:700 13px var(--pix);text-shadow:2px 2px 0 #000;position:relative;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-cstars{color:#ffd166;font-size:13px;letter-spacing:1px;position:relative;text-shadow:0 0 6px #ffb02a}
+.g-cnew,.g-cdup{position:absolute;top:6px;right:6px;font:700 11px var(--pix);font-style:normal;padding:1px 6px;border-radius:5px;border:2px solid #000}
+.g-cnew{background:#e0533f;transform:rotate(8deg)}.g-cdup{background:rgba(0,0,0,.4);border-color:transparent}
+.g-recap{opacity:0;transition:opacity .4s;text-align:center;margin-top:14px}.g-recap.show{opacity:1}
+.g-rline{font:500 17px var(--pix);text-shadow:2px 2px 0 #000;margin-bottom:6px}
+@media (max-width:820px){.g-cards{grid-template-columns:repeat(5,minmax(0,1fr));width:96vw}.g-card{width:auto;height:150px}.g-card img{width:64px;height:64px}}
+/* célébrations */
+.celeb{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(20,14,30,.55);animation:fadein .25s}
+.celeb.out{animation:fadeout .3s forwards}
+@keyframes fadein{from{opacity:0}}@keyframes fadeout{to{opacity:0}}
+.cb-rays{position:absolute;left:50%;top:50%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;opacity:.6;animation:rays 7s linear infinite;
+  background:repeating-conic-gradient(from 0deg,var(--tc) 0deg 6deg,transparent 6deg 20deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 38%);mask:radial-gradient(circle,#000 0,transparent 38%)}
+.cb-card{position:relative;background:#fff;border:4px solid var(--ink);border-radius:16px;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 6px var(--yellow),0 10px 0 rgba(0,0,0,.3);padding:16px 28px;text-align:center;animation:rvin .5s cubic-bezier(.2,1.6,.4,1) both;opacity:0;transform:scale(.6)}
+.cb-card canvas{width:120px;height:120px;animation:float 2s ease-in-out infinite}
+.cb-title{font:700 24px var(--pix);color:var(--ink)}.cb-sub{font-size:14px;color:var(--mute);margin:2px 0 6px}
+.cb-rew{display:inline-block;font:700 18px var(--pix);background:var(--yellow);border:2px solid var(--ink);border-radius:99px;padding:2px 14px;animation:starpop .5s .3s both}
+.cb-card small{display:block;margin-top:8px;color:var(--mute);font-size:11px}
 /* le spectacle d'ouverture de Ball */
 #gacha{position:fixed;inset:0;z-index:40;overflow:hidden;background:radial-gradient(circle at 50% 50%,#3a2f58 0,#15101f 70%);font-family:var(--pix);color:#fff}
 #gacha[hidden]{display:none}
@@ -307,8 +371,10 @@ body.noaside.chatting aside{display:flex}
 <script src="features.js"></script>
 <script src="ui.js"></script>
 <script src="talk.js"></script>
+<script src="dexdata.js"></script>
 <script src="dex.js"></script>
 <script src="gacha.js"></script>
+<script src="badges.js"></script>
 <script src="events.js"></script>
 <script>
 'use strict';

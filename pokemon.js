@@ -7,7 +7,9 @@
    Ils utilisent leur sprite pixel art officiel (icônes PokeAPI) ; une Poké Ball en attendant le chargement.
    ==================================================================== */
 const CRY = { 25: 'Pika pika !', 26: 'Raiii !', 1: 'Bulbi !', 4: 'Sala !', 7: 'Carapuce !', 133: 'Vouiii !', 39: 'Rondou… doudou ♪', 143: 'Ronnnfl…', 129: '*flop flop*', 150: '…', 151: 'Mew !' };
-const SINGERS = new Set([39, 40]), SPARKY = new Set([25, 26, 81, 82, 100, 101, 125, 135, 145]), FIERY = new Set([4, 5, 6, 37, 38, 58, 59, 77, 78, 126, 136, 146]);
+const SINGERS = new Set([39, 40, 174]);                                   // Rondoudou & co
+// les vrais types (dexdata.js) : les électriques font des étincelles, ceux de feu éclairent le jardin la nuit
+const SPARKY = { has: id => typeof dexEl === 'function' && dexEl(id, 'e') }, FIERY = { has: id => typeof dexEl === 'function' && dexEl(id, 'f') };
 let MONS = [];
 // (re)construit les habitants du jardin à partir de l'équipe choisie ; sans équipe, un Pikachu sauvage passe dire bonjour
 function setGardenTeam(ids) {
@@ -19,7 +21,8 @@ function setGardenTeam(ids) {
     const isWater = typeof WATER_IDS !== 'undefined' && WATER_IDS.has(id) && water++ < 2;
     const cell = isWater ? [-3, 19] : (monCell() || [10, 23]);
     return { id: 'mon-' + id, dex: id, name: typeof dexName === 'function' ? dexName(id) : 'Pikachu',
-      cry: CRY[id] || ((typeof dexName === 'function' ? dexName(id) : '') + ' !'), water: isWater, wild: !(ids && ids.length),
+      cry: CRY[id] || ((typeof dexName === 'function' ? dexName(id) : '') + ' !'), water: isWater, aqua: isWater, wild: !(ids && ids.length),
+      nextLand: performance.now() + 20000 + Math.random() * 30000,
       speed: isWater ? 0.8 : 1 + ((id * 37) % 10) / 9, x: cell[0] + 0.5, y: cell[1] + 0.5, path: [], dir: i % 2 ? 1 : -1, mode: 'idle', next: performance.now() + 2000 + i * 1500, label: '' };
   });
 }
@@ -44,7 +47,18 @@ function monGo(m, cell, mode, label) {
 HOOKS.update.push((dt, now) => {
   const rain = badWeather(), dark = night();
   MONS.forEach(m => {
-    if (m.water) {                                                     // Carapuce nage dans la mare (déplacement libre sur l'eau)
+    if (m.water) {                                                     // les Pokémon d'eau nagent dans la mare (déplacement libre sur l'eau)
+      if (now > m.nextLand && !m.catPlay) {                            // … et de temps en temps ils sortent faire un tour
+        m.nextLand = now + 30000 + Math.random() * 40000;
+        const shore = [[-1, 19], [-1, 18], [-1, 20], [-3, 21], [-4, 21], [-2, 21], [-5, 17], [-2, 17]].filter(([x, y]) => gardenFree(x, y));
+        if (shore.length && Math.random() < 0.55) {
+          const [sx, sy] = pick(shore);
+          m.water = false; m.x = Math.min(POND.x1 - 0.5, Math.max(POND.x0 + 0.5, sx + 0.5)); m.y = Math.min(POND.y1 - 0.5, Math.max(POND.y0 + 0.5, sy + 0.5));
+          m.landUntil = now + 25000 + Math.random() * 35000; m.path = [[sx, sy]]; m.mode = 'walk'; m.after = 'idle'; m.afterLabel = 'Sort de la mare'; m.next = now + 1500;
+          emote(m, '💦', 1500);
+          return;
+        }
+      }
       if (!m.tx || now > m.next) {
         m.tx = POND.x0 + 0.5 + Math.random() * (POND.x1 - POND.x0 - 1); m.ty = POND.y0 + 0.5 + Math.random() * (POND.y1 - POND.y0 - 1);
         m.next = now + 4000 + Math.random() * 6000;
@@ -62,8 +76,20 @@ HOOKS.update.push((dt, now) => {
       else { m.x += dx / d * st; m.y += dy / d * st; }
       return;
     }
+    if (m.aqua && m.landUntil && now > m.landUntil && !m.catPlay) {   // retour à la mare
+      const [cx, cy] = [Math.floor(m.x), Math.floor(m.y)];
+      if (Math.abs(cx - (-1)) + Math.abs(cy - 19) <= 1 || (cy === 21 && cx >= -5 && cx <= -2) || (cy === 17 && cx >= -5 && cx <= -2)) {
+        m.landUntil = 0; m.water = true; m.tx = 0; m.x = Math.min(POND.x1 - 0.5, Math.max(POND.x0 + 0.5, m.x)); m.y = Math.min(POND.y1 - 0.5, Math.max(POND.y0 + 0.5, m.y));
+        m.next = now; m.nextLand = now + 30000 + Math.random() * 40000; emote(m, '💦', 1500);
+        if (typeof say === 'function' && Math.random() < 0.5) say(m, 'Plouf !', { mon: true });
+        return;
+      }
+      if (!m.path.length) monGo(m, [-1, 19], 'idle', 'Retourne à la mare');
+      return;
+    }
     if (now < m.next) return;
     m.next = now + 5000 + Math.random() * 9000;
+    if (rain && m.aqua) { m.mode = 'idle'; m.label = MON_LABEL.rain; if (Math.random() < 0.5) monGo(m, monCell(), 'idle', MON_LABEL.rain); return; }
     if (rain) {                                                        // à l'abri sous un arbre
       const s = SHELTERS[MONS.indexOf(m) % SHELTERS.length];
       if (Math.floor(m.x) !== s[0] || Math.floor(m.y) !== s[1]) monGo(m, s, 'shelter', MON_LABEL.shelter); else m.mode = 'shelter';
@@ -236,7 +262,8 @@ HOOKS.items.push((items, t) => {
     m._box = [x - 12, y - 26, 24, 27];
   } }));
 });
-// icône pixel art officielle (40x30, regarde vers la gauche), retournée selon la direction
+// icône pixel art officielle (regarde vers la gauche) : recadrée sur le Pokémon, réduite si besoin
+// (les sprites des dernières générations sont plus grands), et une version retournée pour aller à droite
 const ICONS = new Map();
 function iconOf(id) {
   let e = ICONS.get(id);
@@ -244,9 +271,18 @@ function iconOf(id) {
     e = { img: new Image(), ok: false, flip: null }; ICONS.set(id, e);
     e.img.crossOrigin = 'anonymous';
     e.img.onload = () => {
-      e.ok = true;
-      const c = document.createElement('canvas'); c.width = e.img.width; c.height = e.img.height;
-      const cc = c.getContext('2d'); cc.translate(c.width, 0); cc.scale(-1, 1); cc.drawImage(e.img, 0, 0); e.flip = c;
+      const src = e.img, W0 = src.width, H0 = src.height;
+      let x0 = 0, y0 = 0, x1 = W0, y1 = H0;
+      try {                                                               // boîte des pixels visibles
+        const t = document.createElement('canvas'); t.width = W0; t.height = H0; const tc = t.getContext('2d'); tc.drawImage(src, 0, 0);
+        const d = tc.getImageData(0, 0, W0, H0).data; x0 = W0; y0 = H0; x1 = 0; y1 = 0;
+        for (let y = 0; y < H0; y++) for (let x = 0; x < W0; x++) if (d[(y * W0 + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x >= x1) x1 = x + 1; if (y < y0) y0 = y; if (y >= y1) y1 = y + 1; }
+        if (x1 <= x0) { x0 = 0; y0 = 0; x1 = W0; y1 = H0; }
+      } catch { }
+      const cw = x1 - x0, ch = y1 - y0, k = Math.min(1, 34 / ch, 40 / cw), w = Math.max(1, Math.round(cw * k)), h = Math.max(1, Math.round(ch * k));
+      const mk = flip => { const c = document.createElement('canvas'); c.width = w; c.height = h; const cc = c.getContext('2d'); cc.imageSmoothingEnabled = false;
+        if (flip) { cc.translate(w, 0); cc.scale(-1, 1); } cc.drawImage(src, x0, y0, cw, ch, 0, 0, w, h); return c; };
+      e.norm = mk(false); e.flip = mk(true); e.ok = true;
     };
     e.img.src = typeof SPRITE !== 'undefined' ? SPRITE.icon(id) : '';
   }
@@ -255,15 +291,15 @@ function iconOf(id) {
 function drawIcon(m, x, y, f, t) {
   const e = iconOf(m.dex || m);
   if (!e.ok) { pokeball(x, y - 4, true); return; }
-  const im = m.dir > 0 ? e.flip : e.img, w = im.width, h = im.height;
+  const im = m.dir > 0 ? e.flip : e.norm, w = im.width, h = im.height;
   if (m.water) {                                                           // dans la mare : seul le haut dépasse
     const b = Math.round(Math.sin(t * 2.4));
     g.save(); g.beginPath(); g.rect(x - w / 2, y - h, w, h - 3); g.clip();
-    g.drawImage(im, Math.round(x - w / 2), Math.round(y - h + 8 + b)); g.restore();
+    g.drawImage(im, Math.round(x - w / 2), Math.round(y - h + 6 + b)); g.restore();
     R(x - 9, y - 4, 18, 2, 'rgba(255,255,255,.55)');
     return;
   }
-  g.drawImage(im, Math.round(x - w / 2), Math.round(y - h + 3 - f));
+  g.drawImage(im, Math.round(x - w / 2), Math.round(y - h + 1 - f));
 }
 // la nuit, les Pokémon de feu éclairent le jardin
 function monLights(t, add) {
@@ -283,6 +319,7 @@ cv.addEventListener('click', () => {
   if (!hoverMon || LASER.on || (drag && drag.moved)) return;
   const m = hoverMon, now = performance.now();
   m.petUntil = now + 2500; m.next = Math.max(m.next, now + 4000);
+  if (typeof addStat === 'function') addStat('pets');
   if (m.mode === 'sleep') { m.mode = 'idle'; m.label = ''; }
   if (typeof say === 'function') say(m, m.cry, { mon: true });
   if (typeof sound === 'function' && SETTINGS.sound) try { tone(880 + Math.random() * 300, 0.09, 'square', 0.03); tone(1180, 0.12, 'square', 0.03, 0.1); } catch { }

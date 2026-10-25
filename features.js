@@ -289,7 +289,7 @@ HOOKS.items.push((items, t) => {
 // peluches = sprites officiels (icônes PokeAPI, voir pokemon.js)
 function plush(id, cx, by, flip) {
   const e = iconOf(id); if (!e.ok) return;
-  const im = flip ? e.flip : e.img; g.drawImage(im, Math.round(cx - im.width / 2), Math.round(by - im.height + 4));
+  const im = flip ? e.flip : e.norm; g.drawImage(im, Math.round(cx - im.width / 2), Math.round(by - im.height));
 }
 furniture.push({ k: py(SOFA.y) + 15.3, draw() { plush(25, px(SOFA.x) - 2, py(SOFA.y) + 2); } });            // Pikachu sur l'accoudoir
 furniture.push({ k: py(3) + 8.6, draw() { pokeball(px(-2) + 8, py(3) - 31, true); } });                     // sur la vitrine du patron

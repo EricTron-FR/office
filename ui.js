@@ -330,6 +330,7 @@ function onMail(m) {
   const from = bySid(m.fromSession), to = bySid(m.toSession);
   const short = m.text.length > 70 ? m.text.slice(0, 70) + '…' : m.text;
   pushNews('✉️', (from ? from.name : m.from) + ' → ' + (to ? to.name : m.to) + ' : ' + short);
+  if (typeof addStat === 'function') addStat('mails');
   if (to) addLog(to, '📬 De ' + (from ? from.name : m.from) + ' : ' + short);
   if (from) addLog(from, '✉️ À ' + (to ? to.name : m.to) + ' : ' + short);
   if (from && to) chatVisit(from, to, m.text);

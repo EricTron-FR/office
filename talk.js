@@ -120,6 +120,7 @@ function resolveTo(from, to) {
 function agentSays(from, to, text) {
   const dest = resolveTo(from, to), short = text.length > 70 ? text.slice(0, 70) + '…' : text, toName = dest ? dest.name : String(to || '').replace(/\s*\[[^\]]*\]\s*$/, '');
   if (typeof pushNews === 'function') pushNews('💬', from.name + ' → ' + toName + ' : ' + short);
+  if (typeof addStat === 'function' && dexLive()) addStat('mails');
   addLog(from, '✉️ À ' + toName + ' : ' + short);
   if (dest) addLog(dest, '📬 De ' + from.name + ' : ' + short);
   if (dest && dest !== from) chatVisit(from, dest, text);

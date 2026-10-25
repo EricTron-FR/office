@@ -2,35 +2,31 @@
 /* ====================================================================
    Eric Office : le Pokédex (gacha)
    Tes agents gagnent des tickets en travaillant pour de vrai → tu fais tourner la roue →
-   elle donne une Poké Ball (ou Super, Hyper, Master Ball) → tu l'ouvres → un Pokémon de Kanto.
-   Les doublons donnent des bonbons (5 bonbons = 1 ticket). Tu choisis jusqu'à 6 Pokémon pour le jardin.
+   elle donne une Poké Ball (ou Super, Hyper, Master Ball) → tu l'ouvres → un Pokémon (les 1025, toutes régions).
+   Tu choisis la région où tirer. Les doublons rapportent des pièces selon leur rareté : on les échange contre
+   des tickets ou des Balls à la boutique. Tu choisis jusqu'à 6 Pokémon pour le jardin.
    Tout est gardé dans ce navigateur (localStorage). Les images viennent du dépôt PokeAPI (GitHub).
    ==================================================================== */
-const DEX_NAMES = ('Bulbizarre,Herbizarre,Florizarre,Salamèche,Reptincel,Dracaufeu,Carapuce,Carabaffe,Tortank,Chenipan,Chrysacier,Papilusion,' +
-  'Aspicot,Coconfort,Dardargnan,Roucool,Roucoups,Roucarnage,Rattata,Rattatac,Piafabec,Rapasdepic,Abo,Arbok,Pikachu,Raichu,Sabelette,' +
-  'Sablaireau,Nidoran♀,Nidorina,Nidoqueen,Nidoran♂,Nidorino,Nidoking,Mélofée,Mélodelfe,Goupix,Feunard,Rondoudou,Grodoudou,Nosferapti,' +
-  'Nosferalto,Mystherbe,Ortide,Rafflesia,Paras,Parasect,Mimitoss,Aéromite,Taupiqueur,Triopikeur,Miaouss,Persian,Psykokwak,Akwakwak,' +
-  'Férosinge,Colossinge,Caninos,Arcanin,Ptitard,Têtarte,Tartard,Abra,Kadabra,Alakazam,Machoc,Machopeur,Mackogneur,Chétiflor,Boustiflor,' +
-  'Empiflor,Tentacool,Tentacruel,Racaillou,Gravalanch,Grolem,Ponyta,Galopa,Ramoloss,Flagadoss,Magnéti,Magnéton,Canarticho,Doduo,Dodrio,' +
-  'Otaria,Lamantine,Tadmorv,Grotadmorv,Kokiyas,Crustabri,Fantominus,Spectrum,Ectoplasma,Onix,Soporifik,Hypnomade,Krabby,Krabboss,' +
-  'Voltorbe,Électrode,Noeunoeuf,Noadkoko,Osselait,Ossatueur,Kicklee,Tygnon,Excelangue,Smogo,Smogogo,Rhinocorne,Rhinoféros,Leveinard,' +
-  'Saquedeneu,Kangourex,Hypotrempe,Hypocéan,Poissirène,Poissoroy,Stari,Staross,M. Mime,Insécateur,Lippoutou,Élektek,Magmar,Scarabrute,' +
-  'Tauros,Magicarpe,Léviator,Lokhlass,Métamorph,Évoli,Aquali,Voltali,Pyroli,Porygon,Amonita,Amonistar,Kabuto,Kabutops,Ptéra,Ronflex,' +
-  'Artikodin,Électhor,Sulfura,Minidraco,Draco,Dracolosse,Mewtwo,Mew').split(',');
-const DEX_N = DEX_NAMES.length;                       // 151
-const dexName = id => DEX_NAMES[id - 1] || '???';
-// rareté officielle : le taux de capture des jeux (3 = presque impossible, 255 = très facile), via PokeAPI,
-// plus le statut légendaire / fabuleux
-const CAPTURE = [45,45,45,45,45,45,45,45,45,255,120,45,255,120,45,255,120,45,255,127,255,90,255,90,190,75,255,90,235,120,45,235,120,45,150,25,190,75,170,50,255,90,255,120,45,190,75,190,75,255,50,255,90,190,75,190,75,190,75,255,120,45,200,100,50,180,90,45,255,120,45,190,60,255,120,45,190,60,190,75,190,60,45,190,45,190,75,190,75,190,60,190,90,45,45,190,75,225,60,190,60,90,45,190,75,45,45,45,190,60,120,60,30,45,45,225,75,225,60,225,60,45,45,45,45,45,45,45,255,45,45,35,45,45,45,45,45,45,45,45,45,45,25,3,3,3,45,45,45,3,45];
-const LEGENDS = new Set([144, 145, 146, 150, 151]);
+// les 1025 Pokémon de toutes les régions (dexdata.js, généré depuis PokeAPI)
+const DEXI = DEX_DATA.map(([name, rate, flag, el, icon, from]) => ({ name, rate: +rate, leg: /[LM]/.test(flag), myth: flag.includes('M'), el, icon, from: +from || 0 }));
+// évolutions : n° → les Pokémon en lesquels il peut évoluer
+const EVOS = {}; DEXI.forEach((d, i) => { if (d.from) (EVOS[d.from] = EVOS[d.from] || []).push(i + 1); });
+const DEX_N = DEXI.length;                            // 1025
+const dexName = id => (DEXI[id - 1] || {}).name || '???';
+const dexEl = (id, k) => !!DEXI[id - 1] && DEXI[id - 1].el.includes(k);   // w eau · f feu · e électrik · v vol · g spectre
+const REGIONS = [['Kanto', 1, 151], ['Johto', 152, 251], ['Hoenn', 252, 386], ['Sinnoh', 387, 493], ['Unys', 494, 649],
+  ['Kalos', 650, 721], ['Alola', 722, 809], ['Galar', 810, 905], ['Paldea', 906, 1025]];
+const regionOf = id => (REGIONS.find(r => id >= r[1] && id <= r[2]) || REGIONS[0])[0];
+// rareté officielle : le taux de capture des jeux (3 = presque impossible, 255 = très facile), plus le statut légendaire / fabuleux
+const CAPTURE = DEXI.map(d => d.rate);
 const TIERS = ['commun', 'peu', 'rare', 'epique', 'legendaire'];
 const TIER_LABEL = { commun: 'Commun', peu: 'Peu commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' };
 const TIER_COLOR = { commun: '#8a94a6', peu: '#5fae5a', rare: '#4f86d6', epique: '#9b6fd6', legendaire: '#f2b23a' };
 const TIER_RULE = { commun: 'taux de capture ≥ 190', peu: 'taux 100 à 189', rare: 'taux 60 à 99', epique: 'taux ≤ 50', legendaire: 'légendaires et fabuleux' };
-const tierOf = id => { const c = CAPTURE[id - 1]; return LEGENDS.has(id) ? 'legendaire' : c >= 190 ? 'commun' : c >= 100 ? 'peu' : c >= 60 ? 'rare' : 'epique'; };
+const tierOf = id => { const d = DEXI[id - 1], c = d.rate; return d.leg ? 'legendaire' : c >= 190 ? 'commun' : c >= 100 ? 'peu' : c >= 60 ? 'rare' : 'epique'; };
 const TIER_OF = {}; for (let id = 1; id <= DEX_N; id++) TIER_OF[id] = tierOf(id);
 const BY_TIER = {}; TIERS.forEach(t => { BY_TIER[t] = []; }); for (let id = 1; id <= DEX_N; id++) BY_TIER[TIER_OF[id]].push(id);
-const WATER_IDS = new Set([7, 8, 9, 54, 55, 60, 61, 62, 72, 73, 86, 87, 90, 91, 98, 99, 116, 117, 118, 119, 120, 121, 129, 130, 131, 134, 138, 139, 140, 141]);
+const WATER_IDS = new Set(); for (let id = 1; id <= DEX_N; id++) if (dexEl(id, 'w') && !dexEl(id, 'v')) WATER_IDS.add(id);
 
 // la roue : quelle Ball (w = chance de tomber dessus), et les raretés que chaque Ball peut contenir (en %, dans l'ordre de TIERS)
 const BALLS = {
@@ -40,14 +36,21 @@ const BALLS = {
   master: { name: 'Master Ball', w: 3, odds: [0, 0, 0, 65, 35], top: '#8a4fc8', band: '#ff8fd0' }
 };
 const WHEEL = ['poke', 'super', 'poke', 'hyper', 'poke', 'super', 'poke', 'master'];      // 8 parts (le tirage suit les poids, pas la taille des parts)
+const SP = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
 const SPRITE = {
-  icon: id => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-vii/icons/' + id + '.png',
-  front: id => 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-iii/firered-leafgreen/' + id + '.png'
+  // icône du jardin : gén. 7 (≤ 807), Épée/Bouclier, Champions, sinon le sprite normal (réduit à l'affichage)
+  icon: id => SP + ({ 7: 'versions/generation-vii/icons/', 8: 'versions/generation-viii/sword-shield/icons/', 9: 'versions/generation-ix/champions/icons/' }[(DEXI[id - 1] || {}).icon] || '') + id + '.png',
+  // grand sprite : Rouge Feu (≤ 386), Noir/Blanc (≤ 649), sinon le sprite normal
+  front: id => SP + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/' : id <= 649 ? 'versions/generation-v/black-white/' : '') + id + '.png'
 };
 
 /* ---------- sauvegarde ---------- */
-const DEX = Object.assign({ tickets: 0, candies: 0, caught: {}, team: [], pulls: 0, starter: null, day: '', tools: 0, log: [] },
+const DEX = Object.assign({ tickets: 0, coins: 0, caught: {}, team: [], pulls: 0, starter: null, day: '', tools: 0, log: [], pullRegion: 'Toutes' },
   (() => { try { return JSON.parse(localStorage.getItem('eo-dex') || '{}'); } catch { return {}; } })());
+if (DEX.candies) { DEX.coins = (DEX.coins || 0) + DEX.candies * 2; delete DEX.candies; }     // anciens bonbons → pièces
+// pièces gagnées pour un doublon, selon la rareté ; prix à la boutique
+const COINS = { commun: 2, peu: 3, rare: 5, epique: 15, legendaire: 40 };
+const SHOP = [['ticket', 10, '🎟 1 ticket'], ['super', 15, 'Super Ball'], ['hyper', 40, 'Hyper Ball'], ['master', 150, 'Master Ball']];
 function saveDex() { try { localStorage.setItem('eo-dex', JSON.stringify(DEX)); } catch { } updateDexButton(); }
 const caughtCount = () => Object.keys(DEX.caught).length;
 
@@ -58,10 +61,15 @@ function earnTickets(n, why) {
   DEX.tickets += n; saveDex();
   if (typeof pushNews === 'function') pushNews('🎟', '+' + n + ' ticket' + (n > 1 ? 's' : '') + ' Pokédex : ' + why, 'party');
 }
-function dexOnDone(a) { if (dexLive() && !a.isSub) earnTickets(1, a.name + ' a terminé sa tâche'); }
+const stat = (k, n) => { if (typeof addStat === 'function') addStat(k, n || 1); };
+function dexOnDone(a) {
+  if (!dexLive() || a.isSub) return;
+  earnTickets(1, a.name + ' a terminé sa tâche');
+  stat('tasks'); const h = new Date().getHours(); if (h >= 22 || h < 6) stat('nights');
+}
 function dexOnTool() {                                     // appelé à chaque outil utilisé par un agent (lignes récentes seulement)
   if (!dexLive()) return;
-  DEX.tools = (DEX.tools || 0) + 1;
+  DEX.tools = (DEX.tools || 0) + 1; stat('tools');
   if (DEX.tools % 40 === 0) earnTickets(1, 'tes agents ont bien bossé (40 actions)'); else if (DEX.tools % 5 === 0) saveDex();
 }
 setTimeout(() => {                                          // bonus du jour, à la première visite
@@ -74,20 +82,25 @@ const weighted = (items, wOf) => { let r = Math.random() * items.reduce((s, x) =
 function rollBall() { return weighted(Object.keys(BALLS), k => BALLS[k].w); }
 function rollMon(ball) {
   const odds = BALLS[ball].odds, tier = weighted(TIERS, t => odds[TIERS.indexOf(t)]);
-  // un petit coup de pouce : on favorise un peu les Pokémon pas encore attrapés
-  const pool = BY_TIER[tier], fresh = pool.filter(id => !DEX.caught[id]);
+  // la région choisie pour le tirage (sinon toutes) ; un petit coup de pouce aux Pokémon pas encore attrapés
+  const reg = REGIONS.find(r => r[0] === DEX.pullRegion);
+  let pool = reg ? BY_TIER[tier].filter(id => id >= reg[1] && id <= reg[2]) : BY_TIER[tier];
+  if (!pool.length) pool = BY_TIER[tier];
+  const fresh = pool.filter(id => !DEX.caught[id]);
   const id = fresh.length && Math.random() < 0.6 ? pick(fresh) : pick(pool);
   return { id, tier };
 }
 function catchMon(id) {
   const isNew = !DEX.caught[id];
   DEX.caught[id] = (DEX.caught[id] || 0) + 1; DEX.pulls++;
-  let candy = 0;
-  if (!isNew) { candy = { commun: 1, peu: 1, rare: 2, epique: 3, legendaire: 5 }[TIER_OF[id]]; DEX.candies += candy; }
+  let coins = 0;
+  if (!isNew) { coins = COINS[TIER_OF[id]]; DEX.coins = (DEX.coins || 0) + coins; }
   if (isNew && DEX.team.length < 6) { DEX.team.push(id); if (typeof setGardenTeam === 'function') setGardenTeam(DEX.team); }
+  stat('pulls'); if (isNew) stat('newmons');
+  const t = TIER_OF[id]; if (t === 'epique') stat('epics'); if (t === 'legendaire') stat('legends'); if (dexEl(id, 'g')) stat('ghosts');
   DEX.log.unshift({ id, at: Date.now() }); DEX.log.length = Math.min(DEX.log.length, 30);
   saveDex();
-  return { isNew, candy };
+  return { isNew, coins };
 }
 
 /* ---------- interface : la fenêtre Pokédex ---------- */
@@ -107,9 +120,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$dex.hidd
 $dex.addEventListener('click', e => { if (e.target === $dex) closeDex(); });
 const imgTag = (id, kind, cls) => '<img class="' + (cls || '') + '" src="' + SPRITE[kind](id) + '" alt="' + esc(dexName(id)) + '" loading="lazy" onerror="this.classList.add(\'nf\')">';
 function renderDex() {
-  const tabs = [['roue', '🎡 Roue'], ['dex', '📕 Pokédex'], ['jardin', '🌳 Mon jardin']];
+  const tabs = [['roue', '🎡 Roue'], ['dex', '📕 Pokédex'], ['jardin', '🌳 Mon jardin'], ['badges', '🏅 Badges & défis']];
   $dex.innerHTML = '<div class="dx-frame"><div class="dx-top"><span class="dx-led"></span><span class="dx-led s r"></span><span class="dx-led s y"></span><span class="dx-led s g"></span>' +
-    '<b>POKÉDEX</b><span class="dx-sp"></span><span class="dx-chip">🎟 ' + DEX.tickets + ' ticket' + (DEX.tickets > 1 ? 's' : '') + '</span><span class="dx-chip">🍬 ' + DEX.candies + '</span>' +
+    '<b>POKÉDEX</b><span class="dx-sp"></span><span class="dx-chip">🎟 ' + DEX.tickets + ' ticket' + (DEX.tickets > 1 ? 's' : '') + '</span><span class="dx-chip" title="Pièces : gagnées avec les doublons">🪙 ' + (DEX.coins || 0) + '</span>' +
     '<span class="dx-chip">' + caughtCount() + ' / ' + DEX_N + '</span><button class="dx-x dx-mute" title="Sons du gacha">' + (SETTINGS.gachaMute ? '🔇' : '🔊') + '</button><button class="dx-x" title="Fermer (Échap)">✕</button></div>' +
     (dexTab === 'starter' ? '' : '<div class="dx-tabs">' + tabs.map(([k, l]) => '<button data-tab="' + k + '" class="' + (dexTab === k ? 'on' : '') + '">' + l + '</button>').join('') + '</div>') +
     '<div class="dx-body"></div></div>';
@@ -120,6 +133,7 @@ function renderDex() {
   if (dexTab === 'starter') renderStarter(body);
   else if (dexTab === 'roue') renderWheel(body);
   else if (dexTab === 'dex') renderGrid(body);
+  else if (dexTab === 'badges' && typeof renderBadges === 'function') renderBadges(body);
   else renderTeam(body);
 }
 
@@ -182,16 +196,66 @@ function renderWheel(body) {
   body.innerHTML = '<div class="dx-wheel"><canvas width="320" height="320"></canvas><div class="dx-side">' +
     '<div class="dx-dialog" id="dxMsg">' + (DEX.tickets ? 'Fais tourner la roue pour gagner une Ball !' : 'Plus de tickets… Tes agents en gagnent un à chaque tâche terminée.') + '</div>' +
     '<button class="dx-go"' + (DEX.tickets ? '' : ' disabled') + '>🎡 Tourner la roue · 1 🎟</button>' +
-    (DEX.candies >= 5 ? '<button class="dx-candy">🍬 Échanger 5 bonbons contre 1 ticket</button>' : '<div class="dx-hint">🍬 Les doublons donnent des bonbons : 5 bonbons = 1 ticket.</div>') +
+    '<div class="dx-multi"><button class="dx-m5"' + (DEX.tickets >= 5 ? '' : ' disabled') + '>⚡ Rafale ×5 · 5 🎟</button><button class="dx-m10"' + (DEX.tickets >= 10 ? '' : ' disabled') + ' title="Au moins un Pokémon rare ou mieux garanti">🔥 Rafale ×10 · 10 🎟</button></div>' +
+    '<label class="dx-reg">🗺 Tirer dans <select>' + ['Toutes', ...REGIONS.map(r => r[0])].map(r => { const R = REGIONS.find(x => x[0] === r);
+      return '<option' + (r === DEX.pullRegion ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>' +
+      '<small>' + (REGIONS.find(r => r[0] === DEX.pullRegion) ? (() => { const R = REGIONS.find(r => r[0] === DEX.pullRegion); return regionCount(R) + ' / ' + (R[2] - R[1] + 1) + ' attrapés'; })() : caughtCount() + ' / ' + DEX_N + ' attrapés') + '</small></label>' +
+    '<div class="dx-shop"><b>🪙 Boutique</b> <span>' + (DEX.coins || 0) + ' pièces</span><div>' + SHOP.map(([k, price, label]) =>
+      '<button data-shop="' + k + '"' + ((DEX.coins || 0) >= price ? '' : ' disabled') + '>' + (k === 'ticket' ? '' : '<canvas width="18" height="18" data-b="' + k + '"></canvas>') + label + ' · ' + price + ' 🪙</button>').join('') + '</div>' +
+      '<small>Doublons : ' + TIERS.map(t => TIER_LABEL[t] + ' +' + COINS[t]).join(' · ') + '</small></div>' +
     '<table class="dx-odds"><tr><th></th><th>Roue</th>' + TIERS.map(t => '<th title="' + TIER_RULE[t] + '"><i style="background:' + TIER_COLOR[t] + '"></i>' + TIER_LABEL[t] + '</th>').join('') + '</tr>' +
       Object.entries(BALLS).map(([k, b]) => '<tr><td><canvas width="22" height="22" data-b="' + k + '"></canvas> <b>' + b.name + '</b></td><td>' + b.w + ' %</td>' + b.odds.map(o => '<td>' + (o ? o + ' %' : '–') + '</td>').join('') + '</tr>').join('') + '</table>' +
       '<div class="dx-hint">Rareté = le vrai taux de capture des jeux Pokémon (survole les colonnes).</div>' +
     '</div></div><div class="dx-open" hidden></div>';
   const cnv = body.querySelector('.dx-wheel canvas'); drawWheel(cnv, wheelAngle);
-  body.querySelectorAll('[data-b]').forEach(cc => ballIcon(cc.getContext('2d'), 11, 11, 8, cc.dataset.b));
-  const candy = body.querySelector('.dx-candy');
-  if (candy) candy.onclick = () => { DEX.candies -= 5; DEX.tickets++; saveDex(); renderDex(); };
+  body.querySelectorAll('[data-b]').forEach(cc => { const r = cc.width / 2; ballIcon(cc.getContext('2d'), r, r, r - 3, cc.dataset.b); });
+  body.querySelector('.dx-reg select').onchange = e => { DEX.pullRegion = e.target.value; saveDex(); renderDex(); };
+  body.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => {
+    const [k, price] = SHOP.find(s => s[0] === b.dataset.shop);
+    if (spinning || (DEX.coins || 0) < price) return;
+    DEX.coins -= price; saveDex();
+    if (k === 'ticket') { DEX.tickets++; saveDex(); renderDex(); return; }
+    spinning = true; openBall(k);                               // la Ball achetée s'ouvre tout de suite
+  });
   body.querySelector('.dx-go').onclick = () => spin(cnv, body);
+  body.querySelector('.dx-m5').onclick = () => spinMulti(cnv, body, 5);
+  body.querySelector('.dx-m10').onclick = () => spinMulti(cnv, body, 10);
+}
+// rafale : la roue tourne vite, puis toutes les Balls s'ouvrent à la suite (×10 : au moins un rare garanti)
+function spinMulti(cnv, body, n) {
+  if (spinning || DEX.tickets < n) return;
+  DEX.tickets -= n; saveDex(); spinning = true;
+  body.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  const t0 = performance.now(), dur = 1800, start = wheelAngle;
+  let lastTick = -1;
+  const step = () => {
+    const p = Math.min(1, (performance.now() - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    wheelAngle = start + e * 9 * Math.PI; drawWheel(cnv, wheelAngle, true);
+    const tick = Math.floor(wheelAngle / (Math.PI / 4));
+    if (tick !== lastTick) { lastTick = tick; if (!SETTINGS.gachaMute) try { tone(1000 + p * 900, 0.02, 'square', 0.02); } catch { } }
+    if (p < 1) requestAnimationFrame(step); else { wheelAngle %= 2 * Math.PI; openMulti(n); }
+  };
+  requestAnimationFrame(step);
+}
+function openMulti(n) {
+  const rolls = [];
+  for (let i = 0; i < n; i++) { const ball = rollBall(); rolls.push(Object.assign({ ball }, rollMon(ball))); }
+  if (n >= 10 && !rolls.some(r => TIERS.indexOf(r.tier) >= 2)) {          // garantie : un rare ou mieux
+    let r; do { r = Object.assign({ ball: 'hyper' }, rollMon('hyper')); } while (TIERS.indexOf(r.tier) < 2);
+    rolls[n - 1] = r;
+  }
+  const items = rolls.map(r => { if (r.ball === 'master') stat('masters'); const res = catchMon(r.id); return Object.assign(r, res); });
+  if (n >= 10) stat('multi10');
+  const fresh = items.filter(i => i.isNew).length, best = items.slice().sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier))[0];
+  if (typeof pushNews === 'function') pushNews('📕', 'Rafale ×' + n + ' : ' + fresh + ' nouveau' + (fresh > 1 ? 'x' : '') + ', meilleur : ' + dexName(best.id) + ' (' + TIER_LABEL[best.tier] + ')', fresh ? 'party' : '');
+  updateDexButton();
+  const done = action => {
+    spinning = false;
+    if (action === 'dex') { dexTab = 'dex'; renderDex(); return; }
+    renderDex();
+    if (action === 'again') { const go = $dex.querySelector(n >= 10 ? '.dx-m10' : '.dx-m5'); if (go && !go.disabled) go.click(); }
+  };
+  if (typeof gachaMulti === 'function') gachaMulti(items, done); else done('ok');
 }
 function spin(cnv, body) {
   if (spinning || DEX.tickets < 1) return;
@@ -222,6 +286,7 @@ function spin(cnv, body) {
 }
 function openBall(ball) {
   const { id, tier } = rollMon(ball), res = catchMon(id);
+  if (ball === 'master') stat('masters');
   if (typeof pushNews === 'function') pushNews('📕', (res.isNew ? 'Nouveau Pokémon : ' : 'Encore un ') + dexName(id) + ' (' + TIER_LABEL[tier] + ')', res.isNew ? 'party' : '');
   updateDexButton();
   const done = action => {
@@ -230,13 +295,19 @@ function openBall(ball) {
     renderDex();
     if (action === 'again') { const go = $dex.querySelector('.dx-go'); if (go) go.click(); }
   };
-  if (typeof gachaShow === 'function') gachaShow(ball, { id, tier, isNew: res.isNew, candy: res.candy }, done); else done('ok');
+  if (typeof gachaShow === 'function') gachaShow(ball, { id, tier, isNew: res.isNew, coins: res.coins }, done); else done('ok');
 }
 
-// le Pokédex : 151 cases, silhouettes pour ceux qu'il reste à attraper
+// le Pokédex : par région, silhouettes pour ceux qu'il reste à attraper
+let dexRegion = 'Kanto', dexOnlyMine = false;
+const regionCount = r => { let n = 0; for (let id = r[1]; id <= r[2]; id++) if (DEX.caught[id]) n++; return n; };
 function renderGrid(body) {
-  let h = '<div class="dx-grid">';
-  for (let id = 1; id <= DEX_N; id++) {
+  const reg = REGIONS.find(r => r[0] === dexRegion) || REGIONS[0];
+  let h = '<div class="dx-regions">' + REGIONS.map(r => { const n = regionCount(r), tot = r[2] - r[1] + 1;
+    return '<button data-reg="' + r[0] + '" class="' + (r[0] === reg[0] ? 'on' : '') + (n === tot ? ' full' : '') + '">' + r[0] + ' <small>' + n + '/' + tot + '</small></button>'; }).join('') + '</div>' +
+    '<label class="dx-only"><input type="checkbox"' + (dexOnlyMine ? ' checked' : '') + '> Seulement mes Pokémon</label><div class="dx-grid">';
+  for (let id = reg[1]; id <= reg[2]; id++) {
+    if (dexOnlyMine && !DEX.caught[id]) continue;
     const n = DEX.caught[id] || 0, tier = TIER_OF[id];
     h += '<div class="dx-cell' + (n ? ' got' : '') + (DEX.team.includes(id) ? ' team' : '') + '" title="' + (n ? esc(dexName(id)) + ' · ' + TIER_LABEL[tier] + ' · taux de capture ' + CAPTURE[id - 1] + ' · ×' + n : '??? · ' + TIER_LABEL[tier]) + '" data-id="' + id + '">' +
       '<span class="num">' + String(id).padStart(3, '0') + '</span>' + imgTag(id, 'icon', n ? '' : 'sil') +
@@ -244,6 +315,8 @@ function renderGrid(body) {
       '<i style="background:' + TIER_COLOR[tier] + '"></i></div>';
   }
   body.innerHTML = '<div class="dx-hint">Clique sur un Pokémon attrapé pour l\'ajouter à ton jardin (ou l\'en retirer). 🌳 = dans le jardin.</div>' + h + '</div>';
+  body.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => { dexRegion = b.dataset.reg; renderDex(); });
+  body.querySelector('.dx-only input').onchange = e => { dexOnlyMine = e.target.checked; renderDex(); };
   body.querySelectorAll('.dx-cell.got').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.id); renderDex(); });
 }
 function toggleTeam(id) {
@@ -256,7 +329,7 @@ function toggleTeam(id) {
 // le jardin : les 6 Pokémon qui y vivent
 function renderTeam(body) {
   const caught = Object.keys(DEX.caught).map(Number).sort((a, b) => a - b);
-  body.innerHTML = '<div class="dx-dialog">Ton jardin accueille jusqu\'à 6 Pokémon. Les Pokémon aquatiques nagent dans la mare.</div>' +
+  body.innerHTML = '<div class="dx-dialog">Ton jardin accueille jusqu\'à 6 Pokémon. Les Pokémon aquatiques nagent dans la mare (deux au maximum).</div>' +
     '<div class="dx-team">' + [0, 1, 2, 3, 4, 5].map(i => {
       const id = DEX.team[i];
       return id ? '<div class="dx-slot" data-rm="' + id + '">' + imgTag(id, 'front', 'mid') + '<b>' + esc(dexName(id)) + '</b><small>retirer</small></div>' : '<div class="dx-slot empty">vide</div>';
