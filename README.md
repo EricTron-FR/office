@@ -29,6 +29,8 @@ Le serveur lit `~/.claude/projects` sans rien y modifier. Il diffuse l'activité
 
 Dans le jardin, les Pokémon sont animés (marche sur 8 directions, repos, sommeil, saut) grâce aux sprites du projet communautaire [PMD SpriteCollab](https://github.com/PMDCollab/SpriteCollab) (licence CC BY-NC 4.0, usage non commercial). Les icônes et grands sprites viennent de [PokeAPI](https://github.com/PokeAPI/sprites).
 
+Le décor utilise deux tilesets libres (CC-BY-SA 3.0) : l'extérieur « Pokemon-inspired » de **Red_Voxel** et l'intérieur de **Bonsaiheldin** (voir [assets/CREDITS.md](assets/CREDITS.md)). Sans eux (hors-ligne, par exemple), le décor dessiné à la main s'affiche.
+
 La progression est gardée dans le navigateur (localStorage). Les données des Pokémon sont dans `dexdata.js` (générées depuis PokeAPI). Les sprites et la police pixel sont chargés depuis Internet (GitHub, Google Fonts).
 
 ## Les agents se parlent
@@ -48,6 +50,8 @@ La progression est gardée dans le navigateur (localStorage). Les données des P
 | `dex.js` | Pokédex : tickets, roue, rafales, régions, pièces, boutique, collection, jardin |
 | `gacha.js` | animations d'ouverture de Ball, de rafale et célébrations |
 | `badges.js` | badges et défis du jour |
+| `tiles.js` | tuiles libres de droits (herbe, chemin, sapins, haie, parquet, tapis) |
+| `assets/` | les deux tilesets et leurs crédits |
 | `talk.js` | bulles manga et conversations entre agents |
 | `features.js` | ambiance : nuit éclairée, laser, chat sur le clavier, employé du jour, pizza, robot, saisons |
 | `events.js` | événements : évacuation, anniversaire, apéro, arc-en-ciel… |

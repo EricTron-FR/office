@@ -226,23 +226,30 @@ function paintBackground() {
   R(0, 0, W, H, VOID);
   const F0 = py(3), F1 = py(14), WY0 = OYp, WY1 = py(3);
   // sols : parquet sombre (CEO), parquet miel (open space), parquet clair + carrelage (salle de pause)
-  planks(px(XMIN), px(-1), F0, F1, ['#a8683e', '#9c603a', '#b07044'], '#5a3420');
-  planks(px(-1), px(22), F0, F1, ['#e8b878', '#e2b070', '#ecbe80'], '#a87444');
+  const T_ = typeof tOk === 'function' && tOk();          // tuiles libres de droits chargées (tiles.js) ?
+  if (T_) { tileWood(px(XMIN), px(-1), F0, F1, WOOD_WARM); tileWood(px(-1), px(22), F0, F1, WOOD_LIGHT); }
+  else { planks(px(XMIN), px(-1), F0, F1, ['#a8683e', '#9c603a', '#b07044'], '#5a3420'); planks(px(-1), px(22), F0, F1, ['#e8b878', '#e2b070', '#ecbe80'], '#a87444'); }
   // tapis rouge du CEO, bordure dorée à motif
   const cx0 = px(-7.5), cx1 = px(-1.5), cy0 = py(5) + 4, cy1 = py(11) - 2;
-  R(cx0 - 1, cy0 - 1, cx1 - cx0 + 2, cy1 - cy0 + 2, OUT); R(cx0, cy0, cx1 - cx0, cy1 - cy0, '#c8402e');
-  R(cx0 + 2, cy0 + 2, cx1 - cx0 - 4, cy1 - cy0 - 4, '#f2c14a'); R(cx0 + 3, cy0 + 3, cx1 - cx0 - 6, cy1 - cy0 - 6, '#c8402e');
-  for (let x = cx0 + 5; x < cx1 - 5; x += 6) { R(x, cy0 + 5, 2, 2, '#f2c14a'); R(x, cy1 - 7, 2, 2, '#f2c14a'); }
-  R(cx0 + 4, cy0 + 4, cx1 - cx0 - 8, 1, '#e05a44');
+  if (T_) tileRug(cx0, cy0 + 2, 6, 5, 'red');
+  else {
+    R(cx0 - 1, cy0 - 1, cx1 - cx0 + 2, cy1 - cy0 + 2, OUT); R(cx0, cy0, cx1 - cx0, cy1 - cy0, '#c8402e');
+    R(cx0 + 2, cy0 + 2, cx1 - cx0 - 4, cy1 - cy0 - 4, '#f2c14a'); R(cx0 + 3, cy0 + 3, cx1 - cx0 - 6, cy1 - cy0 - 6, '#c8402e');
+    for (let x = cx0 + 5; x < cx1 - 5; x += 6) { R(x, cy0 + 5, 2, 2, '#f2c14a'); R(x, cy1 - 7, 2, 2, '#f2c14a'); }
+    R(cx0 + 4, cy0 + 4, cx1 - cx0 - 8, 1, '#e05a44');
+  }
   spark(px(-4.5), cy1 - 14, 6, '#f2c14a');
-  planks(px(22), px(32), F0, F1, ['#f2d29c', '#eccb94', '#f6d8a6'], '#c0945c');
-  pkTiles(px(23), px(32), py(3), py(6), '#ffffff', '#e8eef2', '#c4ccd4');
+  if (T_) { tileWood(px(22), px(32), F0, F1, WOOD_LIGHT); tileStone(px(23), px(32), py(3), py(6)); }
+  else { planks(px(22), px(32), F0, F1, ['#f2d29c', '#eccb94', '#f6d8a6'], '#c0945c'); pkTiles(px(23), px(32), py(3), py(6), '#ffffff', '#e8eef2', '#c4ccd4'); }
   R(px(23), py(6), px(32) - px(23), 1, OUT);
   // tapis du salon : bleu Pokémon avec la Pokéball… et l'étincelle Claude au centre
   const rx0 = px(24), rx1 = px(32) - 4, ry0 = py(9) + 2, ry1 = py(14) - 4;
-  R(rx0 - 1, ry0 - 1, rx1 - rx0 + 2, ry1 - ry0 + 2, OUT); R(rx0, ry0, rx1 - rx0, ry1 - ry0, '#4f78c8');
-  R(rx0 + 3, ry0 + 3, rx1 - rx0 - 6, ry1 - ry0 - 6, '#ffffff'); R(rx0 + 4, ry0 + 4, rx1 - rx0 - 8, ry1 - ry0 - 8, '#6a94e0');
-  for (let x = rx0 + 6; x < rx1 - 6; x += 5) R(x, ry0 + 6, 2, 1, '#8ab0f0');
+  if (T_) tileRug(rx0 + 2, ry0 + 2, 7, 4, 'blue');
+  else {
+    R(rx0 - 1, ry0 - 1, rx1 - rx0 + 2, ry1 - ry0 + 2, OUT); R(rx0, ry0, rx1 - rx0, ry1 - ry0, '#4f78c8');
+    R(rx0 + 3, ry0 + 3, rx1 - rx0 - 6, ry1 - ry0 - 6, '#ffffff'); R(rx0 + 4, ry0 + 4, rx1 - rx0 - 8, ry1 - ry0 - 8, '#6a94e0');
+    for (let x = rx0 + 6; x < rx1 - 6; x += 5) R(x, ry0 + 6, 2, 1, '#8ab0f0');
+  }
   spark(px(27.5), Math.round((ry0 + ry1) / 2), 5, '#ffffff');
   // tapis d'entrée
   R(px(0.5) - 2, py(3), 26, 9, OUT); R(px(0.5) - 1, py(3), 24, 8, '#c8402e'); R(px(0.5) + 1, py(3) + 2, 20, 4, '#e8604a');

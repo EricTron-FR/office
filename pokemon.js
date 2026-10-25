@@ -48,14 +48,15 @@ HOOKS.update.push((dt, now) => {
   const rain = badWeather(), dark = night();
   MONS.forEach(m => {
     if (m.water) {                                                     // les Pokémon d'eau nagent dans la mare (déplacement libre sur l'eau)
-      if (now > m.nextLand && !m.catPlay) {                            // … et de temps en temps ils sortent faire un tour
+      if ((now > m.nextLand || dark) && !m.catPlay) {                  // … ils sortent faire un tour (et toujours pour aller dormir la nuit)
         m.nextLand = now + 30000 + Math.random() * 40000;
-        const shore = [[-1, 19], [-1, 18], [-1, 20], [-3, 21], [-4, 21], [-2, 21], [-5, 17], [-2, 17]].filter(([x, y]) => gardenFree(x, y));
-        if (shore.length && Math.random() < 0.55) {
+        const shore = [[-1, 19], [-1, 18], [-1, 20], [-3, 21], [-4, 21], [-2, 21], [-5, 17], [-2, 17]].filter(([x, y]) => gardenFree(x, y) && !MONS.some(o => o !== m && Math.floor(o.x) === x && Math.floor(o.y) === y));
+        if (shore.length && (dark || Math.random() < 0.55)) {
           const [sx, sy] = pick(shore);
           m.water = false; m.x = Math.min(POND.x1 - 0.5, Math.max(POND.x0 + 0.5, sx + 0.5)); m.y = Math.min(POND.y1 - 0.5, Math.max(POND.y0 + 0.5, sy + 0.5));
-          m.landUntil = now + 25000 + Math.random() * 35000; m.path = [[sx, sy]]; m.mode = 'walk'; m.after = 'idle'; m.afterLabel = 'Sort de la mare'; m.next = now + 1500;
-          emote(m, '💦', 1500);
+          m.landUntil = dark ? Infinity : now + 25000 + Math.random() * 35000; m.nightLand = dark;
+          m.path = [[sx, sy]]; m.mode = 'walk'; m.after = dark ? 'sleep' : 'idle'; m.afterLabel = dark ? 'Dort au bord de la mare' : 'Sort de la mare'; m.next = now + (dark ? 20000 : 1500);
+          emote(m, dark ? '💤' : '💦', 1500);
           return;
         }
       }
@@ -66,7 +67,7 @@ HOOKS.update.push((dt, now) => {
       const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
       m.swimming = d > 0.05;
       if (d > 0.05) { m.x += dx / d * Math.min(d, m.speed * dt * 0.6); m.y += dy / d * Math.min(d, m.speed * dt * 0.6); if (Math.abs(dx) > 0.05) m.dir = dx > 0 ? 1 : -1; m.face8 = dir8(dx, dy); }
-      m.mode = 'swim'; m.label = rain ? MON_LABEL.rain : dark ? 'Fait la planche sous les étoiles' : MON_LABEL.swim;
+      m.mode = 'swim'; m.label = rain ? MON_LABEL.rain : MON_LABEL.swim;
       return;
     }
     if (m.petUntil > now || m.playUntil > now) { m.path = []; return; }
@@ -78,6 +79,7 @@ HOOKS.update.push((dt, now) => {
       else { m.x += dx / d * st; m.y += dy / d * st; }
       return;
     }
+    if (m.nightLand && !dark) { m.nightLand = false; m.landUntil = now; m.mode = 'idle'; }        // le jour se lève : on retourne nager
     if (m.aqua && m.landUntil && now > m.landUntil && !m.catPlay) {   // retour à la mare
       const [cx, cy] = [Math.floor(m.x), Math.floor(m.y)];
       if (Math.abs(cx - (-1)) + Math.abs(cy - 19) <= 1 || (cy === 21 && cx >= -5 && cx <= -2) || (cy === 17 && cx >= -5 && cx <= -2)) {
@@ -288,8 +290,8 @@ function pmdOf(id) {
 function drawPmd(m, x, y) {
   const e = pmdOf(m.dex), A = e.anims, ok = n => A[n] && A[n].ok;
   if (!ok('Walk') && !ok('Idle')) return 0;
-  const moving = m.path.length > 0 || (m.water && m.swimming);
-  const name = m.mode === 'sleep' && ok('Sleep') ? 'Sleep'
+  const moving = m.path.length > 0 || m.water;
+  const name = m.mode === 'sleep' && !m.water && ok('Sleep') ? 'Sleep'
     : (m.mode === 'play' || m.petUntil > performance.now()) && ok('Hop') ? 'Hop'
     : moving || !ok('Idle') ? (ok('Walk') ? 'Walk' : 'Idle') : 'Idle';
   const an = A[name], row = an.rows >= 8 ? (m.face8 || 0) : 0;

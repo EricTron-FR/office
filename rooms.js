@@ -58,8 +58,11 @@ function paintRooms() {
   R(px(42) - 3, py(3), 3, py(14) - py(3), '#5a5f66'); for (let y = py(3); y < py(14); y += 6) R(px(42) - 4, y, 1, 4, '#7a8088');
 
   // jardin suspendu : herbe, chemin de sable, mare
-  paintGrass(px(GARDEN.x0), px(GARDEN.x1), py(GARDEN.y0), py(GARDEN.y1) + 6);
-  paintPath();
+  const T_ = typeof tOk === 'function' && tOk();          // tuiles libres de droits chargées (tiles.js) ?
+  if (T_) {
+    tileGrass(px(GARDEN.x0), px(GARDEN.x1), py(GARDEN.y0), py(GARDEN.y1) + 6);
+    tilePath((x, y) => PATH_CELLS.has(x + ',' + y) || (y < GARDEN.y0 && (x === 10 || x === 11)) || (x >= 27 && (y === 21 || y === 22)));
+  } else { paintGrass(px(GARDEN.x0), px(GARDEN.x1), py(GARDEN.y0), py(GARDEN.y1) + 6); paintPath(); }
   const mx0 = px(POND.x0), mx1 = px(POND.x1), my0 = py(POND.y0), my1 = py(POND.y1);
   R(mx0 - 4, my0 - 4, mx1 - mx0 + 8, my1 - my0 + 8, '#e8d098'); R(mx0 - 3, my0 - 3, mx1 - mx0 + 6, my1 - my0 + 6, OUT);
   R(mx0 - 2, my0 - 2, mx1 - mx0 + 4, my1 - my0 + 4, '#a8a0b8');
@@ -67,10 +70,13 @@ function paintRooms() {
   for (let y = my0; y < my1; y += 5) { R(mx0 - 2, y, 2, 4, '#c8c0d8'); R(mx1, y + 2, 2, 3, '#8a8098'); }
   R(mx0, my0, mx1 - mx0, my1 - my0, '#5098e8'); R(mx0, my0, mx1 - mx0, 2, '#3870c0'); R(mx0, my0, 2, my1 - my0, '#3870c0');
   // bibliothèque : parquet + tapis
-  planks(px(28), px(42), py(LOW.floor), py(LOW.bottom), ['#b07a4c', '#a87244', '#b88252'], '#5a3420');
-  R(px(30) + 3, py(22) + 3, px(41) - px(30) - 2, py(27) - py(22), OUT);
-  R(px(30) + 4, py(22) + 4, px(41) - px(30) - 4, py(27) - py(22) - 2, '#c8402e');
-  R(px(30) + 6, py(22) + 6, px(41) - px(30) - 8, py(27) - py(22) - 6, '#f2c14a'); R(px(30) + 7, py(22) + 7, px(41) - px(30) - 10, py(27) - py(22) - 8, '#c8402e');
+  if (T_) { tileWood(px(28), px(42), py(LOW.floor), py(LOW.bottom), WOOD_WARM); tileRug(px(30) + 8, py(22) + 4, 10, 5, 'green'); }
+  else {
+    planks(px(28), px(42), py(LOW.floor), py(LOW.bottom), ['#b07a4c', '#a87244', '#b88252'], '#5a3420');
+    R(px(30) + 3, py(22) + 3, px(41) - px(30) - 2, py(27) - py(22), OUT);
+    R(px(30) + 4, py(22) + 4, px(41) - px(30) - 4, py(27) - py(22) - 2, '#c8402e');
+    R(px(30) + 6, py(22) + 6, px(41) - px(30) - 8, py(27) - py(22) - 6, '#f2c14a'); R(px(30) + 7, py(22) + 7, px(41) - px(30) - 10, py(27) - py(22) - 8, '#c8402e');
+  }
 
   // haut de la rangée du bas : tranche du mur vue de dessus
   const cap0 = py(LOW.top), wy0 = cap0 + 5, wy1 = py(LOW.floor);
@@ -110,7 +116,8 @@ function paintRooms() {
 }
 paintRooms();
 // peint un élément de déco fixe sur le fond
-function paintExtra(fn) { const prev = g; g = bg.getContext('2d'); fn(); g = prev; }
+const BG_EXTRAS = [];
+function paintExtra(fn) { BG_EXTRAS.push(fn); const prev = g; g = bg.getContext('2d'); fn(); g = prev; }
 
 // murs verticaux (même style que les autres murs de séparation)
 function splitWall(tx, topY, doorY, bottomY) {
@@ -451,13 +458,19 @@ function pkTree(cx, by, small) {
   R(cx - s(8), ccy - s(9), 3, 1, '#b8f0a0'); R(cx - s(10), ccy - s(7), 2, 1, '#b8f0a0');   // reflet
 }
 const TREES = [[24, 18]];
-TREES.forEach(([x, y]) => { block(x, y); block(x + 1, y); furniture.push({ k: py(y) + 14, draw() { pkTree(px(x + 1), py(y) + 14); } }); });
+const tree = (cx, by, r) => typeof tOk === 'function' && tOk() ? tileTree(cx, by) : pkTree(cx, by, r);
+TREES.forEach(([x, y]) => { block(x, y); block(x + 1, y); furniture.push({ k: py(y) + 14, draw() { tree(px(x + 1), py(y) + 14); } }); });
 // bordure de forêt, comme au bord des routes : deux rangées d'arbres serrés en bas, une colonne à gauche
 for (let x = GARDEN.x0; x < GARDEN.x1; x += 2) {
-  furniture.push({ k: py(27) + 6, draw() { pkTree(px(x + 2), py(27) + 8, 0.8); } });           // rangée du fond, décalée
-  furniture.push({ k: py(27) + 15, draw() { pkTree(px(x + 1), py(27) + 16, 0.8); } });
+  furniture.push({ k: py(27) + 6, draw() { tree(px(x + 2), py(27) + 8, 0.8); } });           // rangée du fond, décalée
+  furniture.push({ k: py(27) + 15, draw() { tree(px(x + 1), py(27) + 16, 0.8); } });
 }
-for (let y = GARDEN.y0 + 1; y < GARDEN.y1 - 1; y += 2) { block(GARDEN.x0 + 1, y); furniture.push({ k: py(y) + 14, draw() { pkTree(px(GARDEN.x0 + 1), py(y) + 15, 0.8); } }); }
+for (let y = GARDEN.y0; y < GARDEN.y1 - 1; y++) block(GARDEN.x0 + 1, y);
+for (let y = GARDEN.y0; y < GARDEN.y1 - 1; y++) furniture.push({ k: py(y) + 15, draw() {   // haie à gauche (ou arbres sans les tuiles)
+  if (typeof tOk === 'function' && tOk()) { const top = y === GARDEN.y0, bot = y === GARDEN.y1 - 2;
+    for (let i = 0; i < 2; i++) blit(TILES.ext, i * 32, 96 + (top ? 0 : bot ? 32 : 16), 16, 16, px(GARDEN.x0) + i * 16, py(y)); }
+  else if ((y - GARDEN.y0) % 2 === 1) pkTree(px(GARDEN.x0 + 1), py(y) + 15, 0.8);
+} });
 // la mare : reflets qui bougent, nénuphars
 HOOKS.floor.push(t => {
   const x0 = px(POND.x0), x1 = px(POND.x1), y0 = py(POND.y0), y1 = py(POND.y1);
@@ -500,8 +513,9 @@ for (let y = TALL.y0; y < TALL.y1; y++) for (let x = TALL.x0; x < TALL.x1; x++) 
 const MAILBOX = { up: 0 };
 deco(8, 17, py(17) + 14, t => {
   const cx = px(8) + 8, by = py(17) + 14;
-  R(cx - 5, by, 10, 2, SHADOW); R(cx - 1, by - 8, 3, 8, '#8a5a34');
-  panel(cx - 6, by - 17, 12, 9, '#e0533f'); R(cx - 4, by - 14, 8, 2, OUT);
+  R(cx - 5, by, 10, 2, SHADOW);
+  if (typeof tOk === 'function' && tOk()) tileMailbox(cx, by + 1);
+  else { R(cx - 1, by - 8, 3, 8, '#8a5a34'); panel(cx - 6, by - 17, 12, 9, '#e0533f'); R(cx - 4, by - 14, 8, 2, OUT); }
   const up = performance.now() < MAILBOX.up;
   if (up) { R(cx + 6, by - 22, 1, 8, OUT); R(cx + 7, by - 22, 4, 3, '#ffd166'); }
   else { R(cx + 6, by - 13, 5, 1, OUT); R(cx + 7, by - 12, 4, 2, '#ffd166'); }
