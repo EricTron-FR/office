@@ -31,25 +31,23 @@ for (let y = POND.y0; y < POND.y1; y++) for (let x = POND.x0; x < POND.x1; x++) 
 
 function paintGrass(x0, x1, y0, y1) {
   R(x0, y0, x1 - x0, y1 - y0, GRASS.base);
-  for (let y = y0; y < y1; y += 8) for (let x = x0; x < x1; x += 8) {
-    const h = scatter(x * 31 + y * 7);
-    if (h % 3) continue;
-    const tx = x + h % 5, ty = y + (h >>> 4) % 5;            // petites touffes en « v »
-    R(tx, ty, 1, 2, GRASS.dark); R(tx + 2, ty, 1, 2, GRASS.dark); R(tx + 1, ty + 1, 1, 1, GRASS.dark);
-    if (h % 7 === 0) R(tx + 4, ty + 2, 2, 1, GRASS.light);
+  const tuft = (x, y) => { R(x, y + 1, 1, 1, GRASS.dark); R(x + 1, y, 1, 2, GRASS.dark); R(x + 3, y, 1, 2, GRASS.dark); R(x + 4, y + 1, 1, 1, GRASS.dark); R(x + 1, y - 1, 1, 1, GRASS.light); R(x + 3, y - 1, 1, 1, GRASS.light); };
+  for (let y = y0; y < y1; y += 16) for (let x = x0; x < x1; x += 16) {
+    tuft(x + 2, y + 4); tuft(x + 10, y + 12);                // deux touffes par tuile, en quinconce
+    R(x + 11, y + 4, 1, 1, '#9ad878'); R(x + 4, y + 13, 1, 1, '#9ad878'); R(x + 7, y + 8, 1, 1, '#6ab450');
   }
 }
 function paintPath() {
   PATH_CELLS.forEach(k => {
     const [cx, cy] = k.split(',').map(Number), x = px(cx), y = py(cy);
-    R(x, y, 16, 16, '#ead69c');
-    const h = scatter(cx * 97 + cy * 13);
-    R(x + h % 12 + 2, y + (h >>> 5) % 12 + 2, 2, 1, '#d2b878'); R(x + (h >>> 9) % 12 + 1, y + (h >>> 13) % 12 + 1, 1, 1, '#f6e8bc');
-    // bordure là où le chemin touche l'herbe
-    if (!PATH_CELLS.has(cx + ',' + (cy - 1)) && cy > 17) R(x, y, 16, 2, '#c8a868');
-    if (!PATH_CELLS.has(cx + ',' + (cy + 1))) R(x, y + 14, 16, 2, '#c8a868');
-    if (!PATH_CELLS.has((cx - 1) + ',' + cy)) R(x, y, 2, 16, '#c8a868');
-    if (!PATH_CELLS.has((cx + 1) + ',' + cy) && cx < 26) R(x + 14, y, 2, 16, '#c8a868');
+    R(x, y, 16, 16, '#e8d098');
+    [[3, 3], [11, 6], [6, 11], [13, 13], [1, 8]].forEach(([dx, dy], i) => { R(x + dx, y + dy, 2, 1, i % 2 ? '#d0b070' : '#c8a868'); R(x + dx, y + dy - 1, 1, 1, '#f6e8bc'); });
+    // l'herbe déborde en dents de scie là où le chemin touche la pelouse
+    const edge = (hor, ex, ey) => { for (let i = 0; i < 16; i += 4) hor ? (R(ex + i, ey, 3, 2, GRASS.base), R(ex + i + 1, ey + (ey > y ? -1 : 2), 1, 1, GRASS.base)) : (R(ex, ey + i, 2, 3, GRASS.base), R(ex + (ex > x ? -1 : 2), ey + i + 1, 1, 1, GRASS.base)); };
+    if (!PATH_CELLS.has(cx + ',' + (cy - 1)) && cy > 17) edge(true, x, y);
+    if (!PATH_CELLS.has(cx + ',' + (cy + 1))) edge(true, x, y + 14);
+    if (!PATH_CELLS.has((cx - 1) + ',' + cy)) edge(false, x, y);
+    if (!PATH_CELLS.has((cx + 1) + ',' + cy) && cx < 26) edge(false, x + 14, y);
   });
 }
 const FACADE_WINDOWS = [-6, -3, 1, 4, 7, 14, 17, 20, 23];
@@ -63,9 +61,11 @@ function paintRooms() {
   paintGrass(px(GARDEN.x0), px(GARDEN.x1), py(GARDEN.y0), py(GARDEN.y1) + 6);
   paintPath();
   const mx0 = px(POND.x0), mx1 = px(POND.x1), my0 = py(POND.y0), my1 = py(POND.y1);
-  R(mx0 - 3, my0 - 3, mx1 - mx0 + 6, my1 - my0 + 6, OUT); R(mx0 - 2, my0 - 2, mx1 - mx0 + 4, my1 - my0 + 4, '#b8b0c8');
-  for (let x = mx0 - 2; x < mx1 + 2; x += 6) { R(x, my0 - 2, 5, 1, '#d8d0e4'); R(x + 2, my1 + 1, 4, 1, '#8a8098'); }
-  R(mx0, my0, mx1 - mx0, my1 - my0, '#4f90d8'); R(mx0, my0, mx1 - mx0, 3, '#3a70b8');
+  R(mx0 - 4, my0 - 4, mx1 - mx0 + 8, my1 - my0 + 8, '#e8d098'); R(mx0 - 3, my0 - 3, mx1 - mx0 + 6, my1 - my0 + 6, OUT);
+  R(mx0 - 2, my0 - 2, mx1 - mx0 + 4, my1 - my0 + 4, '#a8a0b8');
+  for (let x = mx0 - 2; x < mx1 + 2; x += 5) { R(x, my0 - 2, 4, 2, '#c8c0d8'); R(x + 2, my1, 3, 2, '#8a8098'); }
+  for (let y = my0; y < my1; y += 5) { R(mx0 - 2, y, 2, 4, '#c8c0d8'); R(mx1, y + 2, 2, 3, '#8a8098'); }
+  R(mx0, my0, mx1 - mx0, my1 - my0, '#5098e8'); R(mx0, my0, mx1 - mx0, 2, '#3870c0'); R(mx0, my0, 2, my1 - my0, '#3870c0');
   // bibliothèque : parquet + tapis
   planks(px(28), px(42), py(LOW.floor), py(LOW.bottom), ['#b07a4c', '#a87244', '#b88252'], '#5a3420');
   R(px(30) + 3, py(22) + 3, px(41) - px(30) - 2, py(27) - py(22), OUT);
@@ -79,17 +79,19 @@ function paintRooms() {
   const fx0 = px(XMIN), fx1 = px(27);
   R(fx0, wy0, fx1 - fx0, wy1 - wy0, '#f4e6c6');
   for (let x = fx0; x < fx1; x += 6) R(x + (scatter(x) % 4), wy0 + 6 + scatter(x + 1) % 20, 1, 1, '#e6d4ae');
-  R(fx0, wy0, fx1 - fx0, 3, '#a0643a'); R(fx0, wy0 + 3, fx1 - fx0, 1, '#6a3e22');
+  R(fx0, wy0, fx1 - fx0, 11, '#d0503a');                                                         // toit en tuiles rouges
+  for (let y = wy0; y < wy0 + 11; y += 4) for (let x = fx0 + ((y - wy0) / 4 % 2 ? 4 : 0); x < fx1; x += 8) { R(x, y, 7, 1, '#e8785a'); R(x + 7, y, 1, 4, '#a03828'); R(x, y + 3, 7, 1, '#b8402e'); }
+  R(fx0, wy0 + 11, fx1 - fx0, 2, OUT); R(fx0, wy0 + 13, fx1 - fx0, 1, '#ffffff');
   R(fx0, wy1 - 6, fx1 - fx0, 6, '#a8a0b8'); R(fx0, wy1 - 6, fx1 - fx0, 1, '#c8c0d8');
   for (let x = fx0; x < fx1; x += 12) R(x + ((x / 12) % 2 ? 6 : 0), wy1 - 5, 1, 5, '#8a8098');
   FACADE_WINDOWS.forEach(c => {
-    const x = px(c) + 2, y = wy0 + 7;
-    R(x - 2, y - 2, 16, 21, OUT); R(x - 1, y - 1, 14, 19, '#ffffff');
-    R(x, y, 12, 17, '#8cc8f0'); R(x, y, 12, 3, '#6aaee0');
-    R(x + 2, y + 9, 1, 3, '#ffffff'); R(x + 3, y + 7, 1, 3, '#ffffff'); R(x + 4, y + 5, 1, 2, '#ffffff');
-    R(x + 5, y, 2, 17, '#ffffff'); R(x, y + 8, 12, 1, '#ffffff');
-    R(x - 3, y + 18, 18, 3, OUT); R(x - 2, y + 18, 16, 2, '#c8402e');                                  // jardinière sous la fenêtre
-    for (let i = 0; i < 4; i++) { R(x - 1 + i * 4, y + 16, 3, 2, LEAF[1]); R(x + i * 4, y + 15, 1, 1, ['#ffd166', '#ff8fb0', '#ffffff', '#ff8fb0'][(c + i) % 4]); }
+    const x = px(c) + 2, y = wy0 + 14;
+    R(x - 2, y - 2, 16, 16, OUT); R(x - 1, y - 1, 14, 14, '#ffffff');
+    R(x, y, 12, 12, '#8cc8f0'); R(x, y, 12, 2, '#6aaee0');
+    R(x + 2, y + 7, 1, 2, '#ffffff'); R(x + 3, y + 5, 1, 2, '#ffffff'); R(x + 4, y + 3, 1, 2, '#ffffff');
+    R(x + 5, y, 2, 12, '#ffffff'); R(x, y + 6, 12, 1, '#ffffff');
+    R(x - 3, y + 13, 18, 3, OUT); R(x - 2, y + 13, 16, 2, '#c8402e');                                  // jardinière sous la fenêtre
+    for (let i = 0; i < 4; i++) { R(x - 1 + i * 4, y + 11, 3, 2, LEAF[1]); R(x + i * 4, y + 10, 1, 1, ['#ffd166', '#ff8fb0', '#ffffff', '#ff8fb0'][(c + i) % 4]); }
   });
   // passages : porte vitrée de l'open space, couloir vers la bibliothèque
   DOORS_DOWN.forEach(c => {
@@ -437,7 +439,7 @@ function disc(cx, cy, rx, ry, c) {
   for (let y = -ry; y <= ry; y++) { const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry)))); R(cx - w, cy + y, w * 2 + 1, 1, c); }
 }
 function pkTree(cx, by, small) {
-  const r = small ? 0.68 : 1, s = v => Math.round(v * r);
+  const r = typeof small === 'number' ? small : small ? 0.68 : 1, s = v => Math.round(v * r);
   R(cx - s(14), by - 2, s(28), 4, SHADOW);
   panel(cx - 3, by - s(12), 6, s(12), '#8a5a34'); R(cx - 2, by - s(12), 1, s(12), '#a8703e');
   const ccy = by - s(27);
@@ -448,26 +450,21 @@ function pkTree(cx, by, small) {
   [[-9, 2], [6, -4], [-2, 7], [9, 5], [-11, -6], [1, -10]].forEach(([x, y]) => { R(cx + s(x), ccy + s(y), 3, 2, '#2f7a3a'); R(cx + s(x) + 1, ccy + s(y) - 1, 2, 1, LEAF[3]); });
   R(cx - s(8), ccy - s(9), 3, 1, '#b8f0a0'); R(cx - s(10), ccy - s(7), 2, 1, '#b8f0a0');   // reflet
 }
-const TREES = [[-6, 25], [24, 25], [24, 18], [-6, 23.0001]].slice(0, 3);
+const TREES = [[24, 18]];
 TREES.forEach(([x, y]) => { block(x, y); block(x + 1, y); furniture.push({ k: py(y) + 14, draw() { pkTree(px(x + 1), py(y) + 14); } }); });
-// barrière blanche tout autour (bas et gauche)
-furniture.push({ k: py(27) + 14, draw() {
-  const y = py(27) + 4;
-  R(px(GARDEN.x0), y + 3, px(GARDEN.x1) - px(GARDEN.x0), 1, OUT); R(px(GARDEN.x0), y + 8, px(GARDEN.x1) - px(GARDEN.x0), 1, OUT);
-  R(px(GARDEN.x0), y + 4, px(GARDEN.x1) - px(GARDEN.x0), 2, '#ffffff'); R(px(GARDEN.x0), y + 9, px(GARDEN.x1) - px(GARDEN.x0), 2, '#ffffff');
-  for (let x = px(GARDEN.x0) + 2; x < px(GARDEN.x1); x += 8) { R(x - 1, y - 1, 5, 14, OUT); R(x, y, 3, 12, '#ffffff'); R(x, y, 3, 1, '#f6f2e8'); R(x + 2, y + 1, 1, 11, '#d8d4e4'); }
-} });
-furniture.push({ k: py(17), draw() {
-  const x = px(GARDEN.x0) + 6;
-  for (let y = py(17); y < py(27) + 4; y += 8) { R(x - 1, y - 1, 5, 10, OUT); R(x, y, 3, 8, '#ffffff'); R(x + 2, y, 1, 8, '#d8d4e4'); }
-  R(x - 3, py(17), 1, py(27) - py(17) + 4, OUT); R(x + 4, py(17), 1, py(27) - py(17) + 4, OUT);
-} });
+// bordure de forêt, comme au bord des routes : deux rangées d'arbres serrés en bas, une colonne à gauche
+for (let x = GARDEN.x0; x < GARDEN.x1; x += 2) {
+  furniture.push({ k: py(27) + 6, draw() { pkTree(px(x + 2), py(27) + 8, 0.8); } });           // rangée du fond, décalée
+  furniture.push({ k: py(27) + 15, draw() { pkTree(px(x + 1), py(27) + 16, 0.8); } });
+}
+for (let y = GARDEN.y0 + 1; y < GARDEN.y1 - 1; y += 2) { block(GARDEN.x0 + 1, y); furniture.push({ k: py(y) + 14, draw() { pkTree(px(GARDEN.x0 + 1), py(y) + 15, 0.8); } }); }
 // la mare : reflets qui bougent, nénuphars
 HOOKS.floor.push(t => {
   const x0 = px(POND.x0), x1 = px(POND.x1), y0 = py(POND.y0), y1 = py(POND.y1);
-  for (let i = 0; i < 7; i++) {
-    const h = scatter(i + 300), p = (t * 0.25 + (h % 100) / 100) % 1, x = x0 + 3 + h % (x1 - x0 - 10), y = y0 + 6 + (h >>> 7) % (y1 - y0 - 10);
-    R(x + Math.round(p * 4), y, 4, 1, 'rgba(255,255,255,' + (0.55 - Math.abs(p - 0.5)).toFixed(2) + ')');
+  const sh = Math.floor(t * 4) % 8;
+  for (let y = y0 + 5, r = 0; y < y1 - 2; y += 6, r++) for (let x = x0 + ((r % 2) * 8 + sh) % 16 - 16; x < x1 - 4; x += 16) {
+    if (x < x0 + 2) continue;
+    R(x, y, 4, 1, '#90c8f8'); R(x + 1, y - 1, 2, 1, '#ffffff');                // la petite vague « ‿ »
   }
   [[x0 + 6, y0 + 9], [x1 - 14, y1 - 12], [x0 + 26, y0 + 22]].forEach(([x, y], i) => {
     const b = Math.round(Math.sin(t * 1.2 + i));
@@ -476,18 +473,17 @@ HOOKS.floor.push(t => {
   });
 });
 // petites fleurs qui se balancent dans l'herbe
+const FLOWER_BEDS = [[0, 3, 17, 18, '#ff5050'], [15, 19, 17, 18, '#ffffff'], [22, 24, 20, 21, '#ff5050'], [-6, -3, 22, 23, '#ffffff'], [7, 10, 25, 27, '#ff5050'], [17, 20, 19, 20, '#ff8fd0']];
 const FLOWERS = [];
-for (let i = 0; i < 46; i++) {
-  const h = scatter(i * 131 + 7), cx = GARDEN.x0 + 1 + h % (GARDEN.x1 - GARDEN.x0 - 1), cy = GARDEN.y0 + (h >>> 8) % (GARDEN.y1 - GARDEN.y0 - 1);
-  if (BLOCKED.has(cx + ',' + cy) || PATH_CELLS.has(cx + ',' + cy) || inTall(cx, cy)) continue;
-  FLOWERS.push({ x: px(cx) + 3 + (h >>> 3) % 10, y: py(cy) + 4 + (h >>> 12) % 9, c: ['#ff6b6b', '#ffd166', '#ffffff', '#ff9ad5', '#9fc8ff'][h % 5], ph: (h % 100) / 100 });
-}
+FLOWER_BEDS.forEach(([xa, xb, ya, yb, c]) => { for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) if (!BLOCKED.has(x + ',' + y) && !PATH_CELLS.has(x + ',' + y)) FLOWERS.push({ x: px(x), y: py(y), c }); });
 HOOKS.floor.push(t => {
-  FLOWERS.forEach(f => {
-    const s = Math.floor(t * 1.4 + f.ph * 2) % 2;
-    R(f.x, f.y + 2, 1, 2, '#3f8f4a');
-    R(f.x - 1 + s, f.y, 1, 1, f.c); R(f.x + 1 + s, f.y, 1, 1, f.c); R(f.x + s, f.y - 1, 1, 1, f.c); R(f.x + s, f.y + 1, 1, 1, f.c); R(f.x + s, f.y, 1, 1, '#ffd166');
-  });
+  const s = Math.floor(t * 1.6) % 2;                         // tout le parterre bouge d'un même geste, comme dans les jeux
+  FLOWERS.forEach(f => [[3, 4], [11, 11]].forEach(([dx, dy]) => {
+    const x = f.x + dx + (s && dx < 8 ? 1 : 0), y = f.y + dy;
+    R(x, y + 3, 1, 2, '#2f7a3a');
+    R(x - 1, y - 1, 3, 3, OUT); R(x - 2, y, 5, 1, OUT);
+    R(x - 1, y, 3, 1, f.c); R(x, y - 1, 1, 3, f.c); R(x, y, 1, 1, '#ffd166');
+  }));
 });
 // hautes herbes : elles recouvrent le bas des persos (comme dans Pokémon) et bougent quand on passe
 const tallBusy = (cx, cy) => [...everyone(), ...cats, ...(typeof MONS !== 'undefined' ? MONS : [])].some(o => Math.floor(o.x) === cx && Math.floor(o.y) === cy);
@@ -548,8 +544,8 @@ furniture.push({ k: py(25) + 14, draw(t) {
       else { R(sx + 1, sy - 3, 1, 4, LEAF[0]); R(sx, sy - 1, 3, 2, '#e0533f'); }                                                     // tomates
     }
   }
-  [y0, y0 + h - 3].forEach(yy => { R(x0, yy, w, 3, OUT); R(x0, yy + 1, w, 1, '#ffffff'); });
-  for (let x = x0; x <= x0 + w; x += 10) { R(x - 1, y0 - 3, 3, h + 3, OUT); R(x, y0 - 2, 1, h + 1, '#ffffff'); }
+  [y0, y0 + h - 3].forEach(yy => { R(x0, yy, w, 3, OUT); R(x0, yy + 1, w, 1, '#c8803e'); });
+  for (let x = x0; x <= x0 + w; x += 10) { R(x - 1, y0 - 4, 4, h + 4, OUT); R(x, y0 - 3, 2, h + 2, '#a8683a'); R(x, y0 - 3, 1, h + 2, '#d8985a'); }
 } });
 SPOTS.push({ cell: [3, 23], face: 'down', label: 'Arrose le potager', w: 5, ok: TERRACE_OK, act: 'water' });
 HOOKS.post.push(t => {                               // l'arrosoir et l'eau qui coule

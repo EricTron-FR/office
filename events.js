@@ -130,7 +130,7 @@ function startDelivery() {
   if (NPCS.some(n => n.isCourier)) return;
   const d = makeAgent('npc-livreur-' + Date.now(), '📦 Livreur', true);
   d.isNpc = d.isCourier = true; d.state = 'idle'; d.style = 3;
-  Object.assign(d.pal, { T: '#8a5a2a', A: '#6e4520', K: '#8a5a2a', k: '#5e3a18', P: '#3a2a1a' }); d.pal.__c && d.pal.__c.clear();
+  Object.assign(d.pal, { T: '#8a5a2a', K: '#8a5a2a', k: '#5e3a18', P: '#3a2a1a' }); finishPal(d.pal);
   d.x = DOOR[0] + 0.5; d.y = DOOR[1] + 0.5; d.phase = 'in';
   d.override = { cell: [-5, 8], until: evNow() + 60000, spot: { face: 'up', label: 'Apporte un colis à ' + OWNER } };
   NPCS.push(d);

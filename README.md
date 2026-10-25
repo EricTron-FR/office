@@ -27,6 +27,8 @@ Le serveur lit `~/.claude/projects` sans rien y modifier. Il diffuse l'activité
 - **Jardin** : jusqu'à 6 Pokémon. Ceux d'eau nagent dans la mare et en sortent parfois. Ils jouent avec les agents et les chats.
 - **Badges & défis** : 20 badges façon arène, débloqués par le travail de tes agents (tâches, actions, nuits, travail en équipe) et par ta collection. Trois défis du jour, plus un bonus si tu fais les trois.
 
+Dans le jardin, les Pokémon sont animés (marche sur 8 directions, repos, sommeil, saut) grâce aux sprites du projet communautaire [PMD SpriteCollab](https://github.com/PMDCollab/SpriteCollab) (licence CC BY-NC 4.0, usage non commercial). Les icônes et grands sprites viennent de [PokeAPI](https://github.com/PokeAPI/sprites).
+
 La progression est gardée dans le navigateur (localStorage). Les données des Pokémon sont dans `dexdata.js` (générées depuis PokeAPI). Les sprites et la police pixel sont chargés depuis Internet (GitHub, Google Fonts).
 
 ## Les agents se parlent

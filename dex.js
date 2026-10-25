@@ -166,48 +166,24 @@ function ballIcon(c, x, y, r, b) {                           // une Ball dessin�
   c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.arc(-r * 0.4, -r * 0.5, r * 0.18, 0, Math.PI * 2); c.fill();
   c.restore();
 }
-let wheelAngle = 0;
-// spinning : les ampoules du bord défilent ; hl : part gagnante qui clignote
-function drawWheel(cnv, ang, spinning, hl) {
-  const c = cnv.getContext('2d'), s = cnv.width, R0 = s / 2 - 16, cx = s / 2, cy = s / 2, n = WHEEL.length, now = performance.now();
-  c.clearRect(0, 0, s, s);
-  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 14, 0, Math.PI * 2); c.fill();
-  c.fillStyle = '#e0533f'; c.beginPath(); c.arc(cx, cy, R0 + 11, 0, Math.PI * 2); c.fill();
-  for (let i = 0; i < 24; i++) {                                     // guirlande d'ampoules
-    const a = i / 24 * Math.PI * 2, lit = spinning ? (Math.floor(now / 70) + i) % 3 === 0 : hl != null ? Math.floor(now / 180) % 2 === i % 2 : i % 2 === 0;
-    c.fillStyle = lit ? '#fff6b0' : '#8a3a2a'; c.beginPath(); c.arc(cx + Math.cos(a) * (R0 + 6), cy + Math.sin(a) * (R0 + 6), 3.2, 0, Math.PI * 2); c.fill();
-    if (lit) { c.fillStyle = 'rgba(255,240,150,.35)'; c.beginPath(); c.arc(cx + Math.cos(a) * (R0 + 6), cy + Math.sin(a) * (R0 + 6), 6, 0, Math.PI * 2); c.fill(); }
-  }
-  c.fillStyle = '#2a2636'; c.beginPath(); c.arc(cx, cy, R0 + 2, 0, Math.PI * 2); c.fill();
-  WHEEL.forEach((b, i) => {
-    const a0 = ang + i * 2 * Math.PI / n - Math.PI / 2, a1 = a0 + 2 * Math.PI / n;
-    c.fillStyle = i === hl && Math.floor(now / 150) % 2 ? '#fff6b0' : i % 2 ? '#fbf3dc' : '#f2d29c'; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R0, a0, a1); c.closePath(); c.fill();
-    c.strokeStyle = '#2a2636'; c.lineWidth = 2; c.stroke();
-    const am = (a0 + a1) / 2; ballIcon(c, cx + Math.cos(am) * R0 * 0.66, cy + Math.sin(am) * R0 * 0.66, s * 0.065, b);
-  });
-  c.fillStyle = '#e0533f'; c.beginPath(); c.arc(cx, cy, 16, 0, Math.PI * 2); c.fill(); c.strokeStyle = '#2a2636'; c.lineWidth = 3; c.stroke();
-  c.fillStyle = '#ffffff'; c.font = '700 13px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('✻', cx, cy + 1);
-  // flèche en haut
-  const bob = spinning ? Math.sin(now / 35) * 2 : 0;
-  c.fillStyle = '#2a2636'; c.beginPath(); c.moveTo(cx - 13, 0); c.lineTo(cx + 13, 0); c.lineTo(cx + bob, 28); c.closePath(); c.fill();
-  c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(cx - 9, 2); c.lineTo(cx + 9, 2); c.lineTo(cx + bob, 23); c.closePath(); c.fill();
-}
+let wheelAngle = 0;                                       // position de la grande roue (gacha.js), gardée d'un tour à l'autre
+// l'écran de lancement : les 4 Balls qui flottent, le gros bouton, les rafales ; la vraie roue s'ouvre en plein écran
 function renderWheel(body) {
-  body.innerHTML = '<div class="dx-wheel"><canvas width="320" height="320"></canvas><div class="dx-side">' +
-    '<div class="dx-dialog" id="dxMsg">' + (DEX.tickets ? 'Fais tourner la roue pour gagner une Ball !' : 'Plus de tickets… Tes agents en gagnent un à chaque tâche terminée.') + '</div>' +
-    '<button class="dx-go"' + (DEX.tickets ? '' : ' disabled') + '>🎡 Tourner la roue · 1 🎟</button>' +
-    '<div class="dx-multi"><button class="dx-m5"' + (DEX.tickets >= 5 ? '' : ' disabled') + '>⚡ Rafale ×5 · 5 🎟</button><button class="dx-m10"' + (DEX.tickets >= 10 ? '' : ' disabled') + ' title="Au moins un Pokémon rare ou mieux garanti">🔥 Rafale ×10 · 10 🎟</button></div>' +
-    '<label class="dx-reg">🗺 Tirer dans <select>' + ['Toutes', ...REGIONS.map(r => r[0])].map(r => { const R = REGIONS.find(x => x[0] === r);
-      return '<option' + (r === DEX.pullRegion ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>' +
-      '<small>' + (REGIONS.find(r => r[0] === DEX.pullRegion) ? (() => { const R = REGIONS.find(r => r[0] === DEX.pullRegion); return regionCount(R) + ' / ' + (R[2] - R[1] + 1) + ' attrapés'; })() : caughtCount() + ' / ' + DEX_N + ' attrapés') + '</small></label>' +
+  const reg = REGIONS.find(r => r[0] === DEX.pullRegion), t = DEX.tickets;
+  body.innerHTML = '<div class="dx-launch"><div class="dx-ltitle">✨ ROUE DE LA CHANCE ✨</div>' +
+    '<div class="dx-lballs">' + Object.entries(BALLS).map(([k, b], i) => '<div class="dx-lball" style="animation-delay:' + (i * 0.25) + 's"><canvas width="112" height="112" data-b="' + k + '"></canvas><b>' + b.name + '</b><small>' + b.w + ' % de chances</small></div>').join('') + '</div>' +
+    '<button class="dx-go"' + (t ? '' : ' disabled') + '>🎡 LANCER LA ROUE · 1 🎟</button>' +
+    '<div class="dx-multi"><button class="dx-m5"' + (t >= 5 ? '' : ' disabled') + '>⚡ Rafale ×5 · 5 🎟</button><button class="dx-m10"' + (t >= 10 ? '' : ' disabled') + ' title="Au moins un Pokémon rare ou mieux garanti">🔥 Rafale ×10 · 10 🎟</button></div>' +
+    '<div class="dx-lhint">' + (t ? 'Tu as <b>' + t + ' ticket' + (t > 1 ? 's' : '') + '</b> 🎟' : 'Plus de tickets : tes agents en gagnent en travaillant (une tâche terminée = 1 🎟).') + '</div></div>' +
+    '<div class="dx-lgrid"><div>' +
+    '<label class="dx-reg">🗺 Tirer dans <select>' + ['Toutes', ...REGIONS.map(r => r[0])].map(r => '<option' + (r === DEX.pullRegion ? ' selected' : '') + '>' + r + '</option>').join('') + '</select>' +
+      '<small>' + (reg ? regionCount(reg) + ' / ' + (reg[2] - reg[1] + 1) : caughtCount() + ' / ' + DEX_N) + ' attrapés</small></label>' +
     '<div class="dx-shop"><b>🪙 Boutique</b> <span>' + (DEX.coins || 0) + ' pièces</span><div>' + SHOP.map(([k, price, label]) =>
       '<button data-shop="' + k + '"' + ((DEX.coins || 0) >= price ? '' : ' disabled') + '>' + (k === 'ticket' ? '' : '<canvas width="18" height="18" data-b="' + k + '"></canvas>') + label + ' · ' + price + ' 🪙</button>').join('') + '</div>' +
-      '<small>Doublons : ' + TIERS.map(t => TIER_LABEL[t] + ' +' + COINS[t]).join(' · ') + '</small></div>' +
+      '<small>Doublons : ' + TIERS.map(t => TIER_LABEL[t] + ' +' + COINS[t]).join(' · ') + '</small></div></div><div>' +
     '<table class="dx-odds"><tr><th></th><th>Roue</th>' + TIERS.map(t => '<th title="' + TIER_RULE[t] + '"><i style="background:' + TIER_COLOR[t] + '"></i>' + TIER_LABEL[t] + '</th>').join('') + '</tr>' +
       Object.entries(BALLS).map(([k, b]) => '<tr><td><canvas width="22" height="22" data-b="' + k + '"></canvas> <b>' + b.name + '</b></td><td>' + b.w + ' %</td>' + b.odds.map(o => '<td>' + (o ? o + ' %' : '–') + '</td>').join('') + '</tr>').join('') + '</table>' +
-      '<div class="dx-hint">Rareté = le vrai taux de capture des jeux Pokémon (survole les colonnes).</div>' +
-    '</div></div><div class="dx-open" hidden></div>';
-  const cnv = body.querySelector('.dx-wheel canvas'); drawWheel(cnv, wheelAngle);
+      '<div class="dx-hint">Rareté = le vrai taux de capture des jeux Pokémon (survole les colonnes).</div></div></div>';
   body.querySelectorAll('[data-b]').forEach(cc => { const r = cc.width / 2; ballIcon(cc.getContext('2d'), r, r, r - 3, cc.dataset.b); });
   body.querySelector('.dx-reg select').onchange = e => { DEX.pullRegion = e.target.value; saveDex(); renderDex(); };
   body.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => {
@@ -217,12 +193,12 @@ function renderWheel(body) {
     if (k === 'ticket') { DEX.tickets++; saveDex(); renderDex(); return; }
     spinning = true; openBall(k);                               // la Ball achetée s'ouvre tout de suite
   });
-  body.querySelector('.dx-go').onclick = () => spin(cnv, body);
-  body.querySelector('.dx-m5').onclick = () => spinMulti(cnv, body, 5);
-  body.querySelector('.dx-m10').onclick = () => spinMulti(cnv, body, 10);
+  body.querySelector('.dx-go').onclick = () => spin(body);
+  body.querySelector('.dx-m5').onclick = () => spinMulti(body, 5);
+  body.querySelector('.dx-m10').onclick = () => spinMulti(body, 10);
 }
 // rafale : la roue tourne vite, puis toutes les Balls s'ouvrent à la suite (×10 : au moins un rare garanti)
-function spinMulti(cnv, body, n) {
+function spinMulti(body, n) {
   if (spinning || DEX.tickets < n) return;
   DEX.tickets -= n; saveDex(); spinning = true;
   body.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -249,14 +225,14 @@ function openMulti(n) {
   };
   if (typeof gachaMulti === 'function') gachaMulti(items, done); else done('ok');
 }
-function spin(cnv, body) {
+function spin(body) {
   if (spinning || DEX.tickets < 1) return;
   DEX.tickets--; saveDex(); spinning = true;
   body.querySelectorAll('button').forEach(b => { b.disabled = true; });
   const ball = rollBall();
   const slots = WHEEL.map((b, i) => b === ball ? i : -1).filter(i => i >= 0), slot = pick(slots);
   if (typeof gachaWheel !== 'function') { openBall(ball); return; }
-  gachaWheel(ball, slot, wheelAngle).then(ang => { wheelAngle = ang; drawWheel(cnv, wheelAngle); openBall(ball); });
+  gachaWheel(ball, slot, wheelAngle).then(ang => { wheelAngle = ang; openBall(ball); });
 }
 function openBall(ball) {
   const { id, tier } = rollMon(ball), res = catchMon(id);

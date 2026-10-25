@@ -820,32 +820,40 @@ function bfs(from, to) {
    O contour · H cheveux · S peau · E yeux · R joues · T t-shirt · A ombre t-shirt
    C badge étincelle · P pantalon · B chaussures · K/k casquette
    ==================================================================== */
+// ombrage façon sprites Pokémon : lumière en haut à gauche, reflet (h, t) et ombre (X, Z, A, p) sur chaque matière
 const SPR = {
   down: [
-    '....OOOO....', '..OOHhhHOO..', '.OHhhhHHHHO.', 'OHhhHHHHHHHO', 'OHHHHHHHHHHO', 'OHSSSHHSSSHO',
-    'OSSSSSSSSSSO', 'OSSESSSSESSO', 'OSSESSSSESSO', 'OSRSSSSSSRSO', '.OSSSSSSSSO.', '..OOOSSOOO..',
-    '.OATTTTTTAO.', 'OAATTTCTTAAO', 'OAATTTTTTAAO', 'OSSTTTTTTSSO'],
+    '....OOOO....', '..OOHhhHOO..', '.OHhhhHHHXO.', 'OHhhHHHHHHXO', 'OHHHHHHHHXXO', 'OHSSSHHSSSXO',
+    'OSSSSSSSSSZO', 'OSSESSSSESZO', 'OSSESSSSESZO', 'OSRSSSSSSRZO', '.OSSSSSSSZO.', '..OOOZZOOO..',
+    '.OtTTTTTTAO.', 'OAtTTTCTTAAO', 'OAtTTTTTAAAO', 'OSZTTAAAAZSO'],
   up: [
-    '....OOOO....', '..OOHHhhOO..', '.OHHHHhhhHO.', 'OHHHHHHHhhHO', 'OHHHHHHHHHHO', 'OHHHHHHHHHHO',
-    'OHHHHHHHHHHO', 'OHHHHHHHHHHO', 'OHHHHHHHHHHO', 'OSHHHHHHHHSO', '.OHHHHHHHHO.', '..OOOSSOOO..',
-    '.OATTTTTTAO.', 'OAATTTTTTAAO', 'OAATTTTTTAAO', 'OSSTTTTTTSSO'],
+    '....OOOO....', '..OOHhhHOO..', '.OHhhhHHHXO.', 'OHhhHHHHHHXO', 'OHHHHHHHHHXO', 'OHHHHHHHHHXO',
+    'OHHHHHHHHXXO', 'OHHHHHHHHXXO', 'OXHHHHHHXXXO', 'OSXXXXXXXXSO', '.OXXXXXXXXO.', '..OOOZZOOO..',
+    '.OtTTTTTTAO.', 'OAtTTTTTTAAO', 'OAtTTTTTAAAO', 'OSZTTAAAAZSO'],
   right: [
-    '....OOOO....', '..OOHHhhOO..', '.OHHHhhhHHO.', 'OHHHhhHHHHHO', 'OHHHHHHHHHHO', 'OHHHHHHSSSHO',
-    'OHHHHSSSSSSO', 'OHHHSSSSSESO', 'OHHHSSSSSESO', 'OHHSSSSSSRSO', '.OHSSSSSSSO.', '...OOSSOOO..',
-    '...OTTTTO...', '...OTAATO...', '...OTAATO...', '...OTSSTO...']
+    '....OOOO....', '..OOHhhHOO..', '.OHhhhHHHHO.', 'OHhhHHHHHHHO', 'OHHHHHHHHHXO', 'OHHHHHHSSSXO',
+    'OHHHHSSSSSSO', 'OXHHSSSSSESO', 'OXHHSSSSSESO', 'OXXSSSSSSRZO', '.OXSSSSSSZO.', '...OOZZOOO..',
+    '...OtTTTO...', '...OtAATO...', '...OtAATO...', '...OTSZTO...']
 };
 const LEGS = {
   fb: [
-    ['..OPPPPPPO..', '..OPPOOPPO..', '..OPPOOPPO..', '..OBBOOBBO..', '..OOOOOOOO..'],
-    ['..OPPPPPPO..', '..OPPOOPPO..', '..OPPOOBBO..', '..OBBOOOOO..', '..OOOO......'],
-    ['..OPPPPPPO..', '..OPPOOPPO..', '..OBBOOPPO..', '..OOOOOBBO..', '......OOOO..']],
+    ['..OPPPPppO..', '..OPPOOPpO..', '..OPPOOPpO..', '..OBBOOBBO..', '..OOOOOOOO..'],
+    ['..OPPPPppO..', '..OPPOOPpO..', '..OPPOOBBO..', '..OBBOOOOO..', '..OOOO......'],
+    ['..OPPPPppO..', '..OPPOOPpO..', '..OBBOOPpO..', '..OOOOOBBO..', '......OOOO..']],
   side: [
-    ['...OPPPPO...', '...OPPPPO...', '...OPPPPO...', '...OBBBBBO..', '...OOOOOOO..'],
-    ['...OPPPPO...', '..OPPOOPPO..', '.OPPO..OPPO.', '.OBBO..OBBBO', '.OOOO..OOOOO'],
-    ['...OPPPPO...', '...OPPPPO...', '...OPPPPO...', '...OBBBBBO..', '...OOOOOOO..']],
-  sit: ['..OPPPPPPO..', '.OPPPPPPPPO.', '.OOBBOOBBOO.', '..OOO..OOO..'],
-  sitSide: ['...OPPPPPPO.', '...OOOOOPPO.', '.......OPPO.', '.......OBBBO', '.......OOOOO']
+    ['...OPPPpO...', '...OPPPpO...', '...OPPPpO...', '...OBBBBBO..', '...OOOOOOO..'],
+    ['...OPPPpO...', '..OPPOOPpO..', '.OPPO..OPpO.', '.OBBO..OBBBO', '.OOOO..OOOOO'],
+    ['...OPPPpO...', '...OPPPpO...', '...OPPPpO...', '...OBBBBBO..', '...OOOOOOO..']],
+  sit: ['..OPPPPppO..', '.OPPPPPPppO.', '.OOBBOOBBOO.', '..OOO..OOO..'],
+  sitSide: ['...OPPPPPpO.', '...OOOOOPpO.', '.......OPpO.', '.......OBBBO', '.......OOOOO']
 };
+// les tons d'ombre et de reflet de chaque perso, calculés depuis ses couleurs
+function finishPal(pal) {
+  pal.R = shade(pal.S, -0.08); pal.h = mix(pal.H, '#ffffff', 0.32); pal.X = mix(pal.H, '#000000', 0.38);
+  pal.Z = mix(pal.S, '#7a3a2a', 0.3); pal.t = mix(pal.T, '#ffffff', 0.3); pal.A = mix(pal.T, '#000000', 0.24); pal.p = mix(pal.P, '#000000', 0.32);
+  if (pal.__c) pal.__c.clear();
+  return pal;
+}
 const SHIRTS = ['#d97757', '#4f86d6', '#5fae5a', '#9b6fd6', '#f2b23a', '#e0607a', '#3f9aa0', '#f5efe3'];
 const SKINS = ['#f6d3b3', '#e8b48c', '#c48a5c', '#8d5a3b'];
 const HAIRS = ['#2b2018', '#6b3f1f', '#d39a3a', '#1f1f27', '#b4452f', '#e9e2d4', '#5a4a8a'];
@@ -860,10 +868,10 @@ function buildRows(a, face, legs, sleep) {
     else { setPx(rows, r, 0, 'O'); setPx(rows, r, 1, 'H'); setPx(rows, r, 10, 'H'); setPx(rows, r, 11, 'O'); }
   }
   if (a.style === 3) {                                               // casquette terracotta
-    rows = rows.map((r, i) => i <= 3 ? r.replace(/[Hh]/g, 'K') : r);
+    rows = rows.map((r, i) => i <= 3 ? r.replace(/[HhX]/g, 'K') : r);
     if (base === 'down') rows[4] = 'OkkkkkkkkkkO';
     if (base === 'right') rows[4] = 'OKKKKKKkkkkO';
-    if (base === 'up') rows[4] = rows[4].replace(/H/g, 'K');
+    if (base === 'up') rows[4] = rows[4].replace(/[HX]/g, 'K');
   }
   if (a.isOwner) {                                                   // Eric : lunettes fines + sweat à capuche noir
     if (base === 'down') {
@@ -887,7 +895,7 @@ function buildRows(a, face, legs, sleep) {
     else for (let r = 6; r <= 8; r++) { setPx(rows, r, 0, 'J'); setPx(rows, r, 11, 'J'); }
   }
   if (a.acc === 'beanie') {
-    rows = rows.map((r, i) => i <= 3 ? r.replace(/[HhK]/g, 'Q') : r);
+    rows = rows.map((r, i) => i <= 3 ? r.replace(/[HhXK]/g, 'Q') : r);
     rows[4] = base === 'up' ? 'OqqqqqqqqqqO' : 'OqqqqqqqqqqO';
     setPx(rows, 0, 5, 'q'); setPx(rows, 0, 6, 'q');
   }
@@ -942,8 +950,8 @@ function makeAgent(id, name, noDesk, lookKey) {
     x: DOOR[0] + 0.5, y: DOOR[1] + 0.5, path: [], mode: 'stand', seat: null, heading: null, face: 'down',
     state: 'idle', bubble: '', act: null, actLabel: '', mood: null, nextMove: 0, desk: null
   };
-  a.pal.R = shade(a.pal.S, -0.08); a.pal.h = mix(a.pal.H, '#ffffff', 0.32);
-  a.palRed = Object.assign({}, a.pal, { S: mix(a.pal.S, '#e0533f', 0.4), R: mix(a.pal.S, '#c8392a', 0.55) });
+  finishPal(a.pal);
+  a.palRed = Object.assign({}, a.pal, { S: mix(a.pal.S, '#e0533f', 0.4), R: mix(a.pal.S, '#c8392a', 0.55), Z: mix(a.pal.S, '#a8281a', 0.5) });
   if (!noDesk) assignDesk(a);
   return a;
 }
@@ -951,7 +959,7 @@ function makeOwner() {
   const o = makeAgent('owner', OWNER, true);
   o.isOwner = true; o.style = 0;
   Object.assign(o.pal, { H: '#4a2f1f', S: '#f1c9a5', T: '#2b2a2e', A: '#1d1c20', C: '#2b2a2e', P: '#6b4a32', B: '#2a1e18', W: '#e9e4da', G: '#3a302a', L: '#cfe3ee' });
-  o.pal.R = shade(o.pal.S, -0.08); o.pal.h = mix(o.pal.H, '#ffffff', 0.3);
+  finishPal(o.pal);
   o.palRed = Object.assign({}, o.pal, { S: mix(o.pal.S, '#e0533f', 0.4) });
   o.heading = CEO_SEAT; arrive(o);
   return o;

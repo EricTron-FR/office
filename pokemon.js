@@ -36,7 +36,7 @@ function monCell() {
   }
   return null;
 }
-const SHELTERS = [[-7, 26], [-4, 26], [23, 26], [26, 26], [23, 19], [26, 19]];   // sous les arbres
+const SHELTERS = [[-6, 26], [-4, 26], [22, 26], [25, 26], [23, 19], [26, 19]];   // sous les arbres
 function monGo(m, cell, mode, label) {
   if (!cell) return;
   m.path = bfs([Math.floor(m.x), Math.floor(m.y)], cell).filter(c => true); m.mode = 'walk'; m.after = mode || 'idle'; m.afterLabel = label || '';
@@ -64,7 +64,8 @@ HOOKS.update.push((dt, now) => {
         m.next = now + 4000 + Math.random() * 6000;
       }
       const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
-      if (d > 0.05) { m.x += dx / d * Math.min(d, m.speed * dt * 0.6); m.y += dy / d * Math.min(d, m.speed * dt * 0.6); if (Math.abs(dx) > 0.05) m.dir = dx > 0 ? 1 : -1; }
+      m.swimming = d > 0.05;
+      if (d > 0.05) { m.x += dx / d * Math.min(d, m.speed * dt * 0.6); m.y += dy / d * Math.min(d, m.speed * dt * 0.6); if (Math.abs(dx) > 0.05) m.dir = dx > 0 ? 1 : -1; m.face8 = dir8(dx, dy); }
       m.mode = 'swim'; m.label = rain ? MON_LABEL.rain : dark ? 'Fait la planche sous les étoiles' : MON_LABEL.swim;
       return;
     }
@@ -72,6 +73,7 @@ HOOKS.update.push((dt, now) => {
     if (m.path.length) {
       const [tx, ty] = m.path[0], tx2 = tx + 0.5, ty2 = ty + 0.5, dx = tx2 - m.x, dy = ty2 - m.y, d = Math.hypot(dx, dy), st = m.speed * dt;
       if (Math.abs(dx) > 0.01) m.dir = dx > 0 ? 1 : -1;
+      if (d > 0.01) m.face8 = dir8(dx, dy);
       if (d <= st) { m.x = tx2; m.y = ty2; m.path.shift(); if (!m.path.length) { m.mode = m.after || 'idle'; m.label = m.afterLabel || ''; } }
       else { m.x += dx / d * st; m.y += dy / d * st; }
       return;
@@ -248,18 +250,72 @@ HOOKS.update.push((dt, now) => {
 });
 
 /* ---------- dessin ---------- */
+const dir8 = (dx, dy) => (((Math.round((90 - Math.atan2(dy, dx) * 180 / Math.PI) / 45)) % 8) + 8) % 8;
+// sprites animés de Pokémon Donjon Mystère (projet communautaire PMD SpriteCollab) : marche sur 8 directions,
+// repos, sommeil, saut. Si un Pokémon n'en a pas, on garde son icône.
+const PMD = 'https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/';
+const PMDS = new Map();
+function pmdBox(img, fw, fh) {                          // hauteur des pieds et du haut de la tête dans la 1re image
+  try {
+    const c = document.createElement('canvas'); c.width = fw; c.height = fh; const cc = c.getContext('2d'); cc.drawImage(img, 0, 0, fw, fh, 0, 0, fw, fh);
+    const d = cc.getImageData(0, 0, fw, fh).data; let top = fh, foot = 0;
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (d[(y * fw + x) * 4 + 3] > 40) { if (y < top) top = y; if (y + 1 > foot) foot = y + 1; }
+    return foot > top ? { top, foot } : { top: 0, foot: fh };
+  } catch { return { top: fh * 0.2, foot: fh * 0.8 }; }
+}
+function pmdOf(id) {
+  let e = PMDS.get(id); if (e) return e;
+  e = { anims: {} }; PMDS.set(id, e);
+  const dir = PMD + String(id).padStart(4, '0') + '/';
+  fetch(dir + 'AnimData.xml').then(r => r.ok ? r.text() : Promise.reject(r.status)).then(txt => {
+    const doc = new DOMParser().parseFromString(txt, 'text/xml'), by = {};
+    doc.querySelectorAll('Anim').forEach(a => { const n = a.querySelector('Name'); if (n) by[n.textContent] = a; });
+    const resolve = n => { let a = by[n], k = 0; while (a && a.querySelector('CopyOf') && k++ < 4) a = by[a.querySelector('CopyOf').textContent]; return a; };
+    ['Walk', 'Idle', 'Sleep', 'Hop'].forEach(name => {
+      const a = resolve(name); if (!a || !a.querySelector('FrameWidth')) return;
+      const fw = +a.querySelector('FrameWidth').textContent, fh = +a.querySelector('FrameHeight').textContent;
+      const dur = [...a.querySelectorAll('Duration')].map(d => +d.textContent || 1);
+      const an = { img: new Image(), fw, fh, dur, total: dur.reduce((s, d) => s + d, 0), ok: false };
+      an.img.crossOrigin = 'anonymous';
+      an.img.onload = () => { an.rows = Math.max(1, Math.round(an.img.height / fh)); Object.assign(an, pmdBox(an.img, fw, fh)); an.ok = true; };
+      an.img.src = dir + a.querySelector('Name').textContent + '-Anim.png';
+      e.anims[name] = an;
+    });
+  }).catch(() => { e.failed = true; });
+  return e;
+}
+// dessine le Pokémon animé ; renvoie la hauteur visible (0 si pas de sprite animé dispo → icône)
+function drawPmd(m, x, y) {
+  const e = pmdOf(m.dex), A = e.anims, ok = n => A[n] && A[n].ok;
+  if (!ok('Walk') && !ok('Idle')) return 0;
+  const moving = m.path.length > 0 || (m.water && m.swimming);
+  const name = m.mode === 'sleep' && ok('Sleep') ? 'Sleep'
+    : (m.mode === 'play' || m.petUntil > performance.now()) && ok('Hop') ? 'Hop'
+    : moving || !ok('Idle') ? (ok('Walk') ? 'Walk' : 'Idle') : 'Idle';
+  const an = A[name], row = an.rows >= 8 ? (m.face8 || 0) : 0;
+  let tick = Math.floor(performance.now() * 0.06) % an.total, fi = 0;
+  while (fi < an.dur.length - 1 && tick >= an.dur[fi]) { tick -= an.dur[fi]; fi++; }
+  const dx = Math.round(x - an.fw / 2), dy = Math.round(y - an.foot + 1);
+  if (m.water && !m.path.length) {                       // dans la mare : seul le haut dépasse
+    const sink = Math.round((an.foot - an.top) * 0.22) - 2, bob = Math.round(Math.sin(performance.now() / 400));   // on ne voit que le haut, au ras de l'eau
+    g.save(); g.beginPath(); g.rect(dx, dy - 10, an.fw, (y + 1) - (dy - 10)); g.clip();
+    g.drawImage(an.img, fi * an.fw, row * an.fh, an.fw, an.fh, dx, dy + sink + bob, an.fw, an.fh); g.restore();
+    R(x - 9, y - 4, 18, 2, 'rgba(255,255,255,.55)');
+  } else g.drawImage(an.img, fi * an.fw, row * an.fh, an.fw, an.fh, dx, dy, an.fw, an.fh);
+  return an.foot - an.top;
+}
 HOOKS.items.push((items, t) => {
   MONS.forEach(m => items.push({ k: py(m.y) + (m.water ? 3 : 7), draw() {
     const x = px(m.x), y = py(m.y) + 7, walking = m.path.length > 0;
     const f = walking ? Math.floor(t * 8) % 2 : (m.mode === 'play' ? Math.round(Math.abs(Math.sin(t * 7)) * 2) : m.mode === 'sing' ? Math.round(Math.abs(Math.sin(t * 3))) : 0);
     if (!m.water) R(x - 7, y - 1, 14, 2, SHADOW);
-    drawIcon(m, x, y, f, t);
+    const hh = drawPmd(m, x, y) || (drawIcon(m, x, y, f, t), 26);
     if (m.mode === 'spark') for (let i = 0; i < 6; i++) { const a = t * 9 + i, r = 11 + (i % 2) * 3; R(x + Math.round(Math.cos(a) * r), y - 12 + Math.round(Math.sin(a) * r * 0.7), 2, 1, i % 2 ? '#fff6a0' : '#f6d33c'); }
     if (m.mode === 'sing') for (let i = 0; i < 3; i++) { const q = (t * 0.6 + i / 3) % 1; g.globalAlpha = 1 - q; icon('note', x - 2 + (i - 1) * 7, y - 26 - Math.round(q * 14), ['#ff8fb0', '#9fc8ff', '#ffd166'][i]); g.globalAlpha = 1; }
     if (m.mode === 'sleep' && !m.water) { const p = (t * 0.4 + MONS.indexOf(m) * 0.3) % 1; g.globalAlpha = 1 - p; pixText('z', x + 6 + Math.round(p * 5), y - 24 - Math.round(p * 8), '#ffffff'); g.globalAlpha = 1; }
     if (m.petUntil > performance.now()) for (let i = 0; i < 2; i++) { const p = (t * 0.9 + i / 2) % 1; g.globalAlpha = 1 - p; icon('heart', x - 4 + i * 5, y - 28 - Math.round(p * 10), '#e0533f'); g.globalAlpha = 1; }
-    m._anchor = { x, y: y - 26, fy: y };
-    m._box = [x - 12, y - 26, 24, 27];
+    m._anchor = { x, y: y - Math.max(18, hh), fy: y };
+    m._box = [x - 12, y - Math.max(18, hh), 24, Math.max(18, hh) + 1];
   } }));
 });
 // icône pixel art officielle (regarde vers la gauche) : recadrée sur le Pokémon, réduite si besoin

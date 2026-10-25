@@ -285,16 +285,8 @@ HOOKS.items.push((items, t) => {
   } });
 });
 
-/* ---------- 8bis. touche Pokémon : peluches, Pokéballs, console ---------- */
-// peluches = sprites officiels (icônes PokeAPI, voir pokemon.js)
-function plush(id, cx, by, flip) {
-  const e = iconOf(id); if (!e.ok) return;
-  const im = flip ? e.flip : e.norm; g.drawImage(im, Math.round(cx - im.width / 2), Math.round(by - im.height));
-}
-furniture.push({ k: py(SOFA.y) + 15.3, draw() { plush(25, px(SOFA.x) - 2, py(SOFA.y) + 2); } });            // Pikachu sur l'accoudoir
+/* ---------- 8bis. touche Pokémon : Pokéballs, console ---------- */
 furniture.push({ k: py(3) + 8.6, draw() { pokeball(px(-2) + 8, py(3) - 31, true); } });                     // sur la vitrine du patron
-furniture.push({ k: py(12) + 2.5, draw() { plush(39, px(-7) + 4, py(11) - 9); } });                           // Rondoudou sur l'aquarium
-furniture.push({ k: py(3) + 8.6, draw() { plush(1, px(13) + 8, py(3) - 24, true); } });  // Bulbizarre sur la bibliothèque
 HOOKS.post.push(() => {   // console portable rétro sur la table basse
   const x0 = px(26) + 11, y0 = py(12) + 2;
   if (NOW() < pizzaUntil) return;
