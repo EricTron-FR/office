@@ -369,14 +369,10 @@ const pot = (cx, by, big) => {
     : [[-6, -6, 3, 6, '#6f8a52'], [-2, -11, 3, 11, '#7f9c5f'], [3, -7, 3, 7, '#86a566']]);
 };
 
-/* --- objets du tileset intérieur (vases, caisses, bougie) --- */
+/* --- objets du tileset intérieur (vases, caisses) --- */
 const tdeco = (tx, ty, sx, sy, sw, sh) => deco(tx, ty, py(ty) + 14, () => { if (typeof tOk === 'function' && tOk()) blit(TILES.int, sx, sy, sw, sh, px(tx) + 8 - (sw >> 1), py(ty) + 15 - sh); });
 tdeco(28, 17, 240, 224, 16, 16); tdeco(31, 17, 224, 224, 16, 16);          // vases à l'entrée de la bibliothèque
 tdeco(41, 7, 180, 164, 24, 24);                                            // caisses en bois sur la terrasse
-furniture.push({ k: py(25) + 3, draw(t) {                                  // bougie sur la grande table
-  if (!(typeof tOk === 'function' && tOk())) return;
-  blit(TILES.int, 244, 164, 8, 16, px(33) + 30, py(24) - 10);
-} });
 
 /* --- bibliothèque --- */
 deco(29, 25, py(26), t => {                          // globe terrestre
