@@ -52,7 +52,10 @@ function waterPlot(i, who) {
 }
 const dryPlots = () => FARM.plots.map((p, i) => p && !plotWet(p) && plotFrac(p) < 1 ? i : -1).filter(i => i >= 0);
 // les agents qui vont « arroser le potager » arrosent vraiment, et les Pokémon Eau du jardin aussi de temps en temps
-const waterSpot = SPOTS.find(s => s.act === 'water'); if (waterSpot) { waterSpot.cell = [20, 20]; waterSpot.face = 'up'; waterSpot.label = 'Arrose le potager à baies'; }
+const waterSpot = SPOTS.find(s => s.act === 'water');
+if (waterSpot) {                                       // on ne va arroser que s'il y a une parcelle sèche
+  const ok0 = waterSpot.ok; Object.assign(waterSpot, { cell: [20, 20], face: 'up', label: 'Arrose le potager à baies', ok: () => (!ok0 || ok0()) && dryPlots().length > 0 });
+}
 let helpT = 0, monWaterT = performance.now() + 8 * 60e3;
 HOOKS.update.push((dt, now) => {
   if (now < helpT) return; helpT = now + 5000;
@@ -77,7 +80,7 @@ HOOKS.floor.push(() => {
     const [cx, cy] = PLOT_CELLS[i], x0 = px(cx), y0 = py(cy), p = FARM.plots[i], wet = plotWet(p);
     R(x0 + 1, y0 + 2, 14, 13, FOUT); R(x0 + 2, y0 + 3, 12, 11, wet ? '#5a3a26' : '#8c6440');
     for (let r = 0; r < 3; r++) R(x0 + 3, y0 + 5 + r * 3, 10, 1, wet ? '#462c1c' : '#74502e');
-    if (wet) { R(x0 + 4, y0 + 4, 2, 1, '#7a6a8a'); R(x0 + 10, y0 + 10, 2, 1, '#7a6a8a'); }
+    if (wet) { R(x0 + 3, y0 + 4, 3, 1, '#6e4c34'); R(x0 + 9, y0 + 10, 3, 1, '#6e4c34'); }          // terre mouillée : juste plus sombre et un peu brillante
     R(x0 + 1, y0 + 14, 14, 1, WOOD.dk); R(x0 + 1, y0 + 2, 14, 1, WOOD.lt);
   }
 });

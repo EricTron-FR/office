@@ -117,7 +117,7 @@ function loadImg(url, fb) {
 const imOk = im => im && im.complete && im.naturalWidth > 0 && !im.bad;
 const FXI = {}; ['waterwisp', 'fireball', 'lightning', 'shadowball', 'impact', 'wisp', 'leftslash', 'rightslash'].forEach(k => { FXI[k] = loadImg(SHOW + k + '.png'); });
 const frontUrl = (id, shiny) => shiny ? SPB + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/shiny/' : id <= 649 ? 'versions/generation-v/black-white/shiny/' : 'shiny/') + id + '.png' : SPRITE.front(id);
-const backUrl = id => SPB + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/back/' : id <= 649 ? 'versions/generation-v/black-white/back/' : 'back/') + id + '.png';
+const backUrl = (id, shiny) => SPB + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/back/' : id <= 649 ? 'versions/generation-v/black-white/back/' : 'back/') + (shiny ? 'shiny/' : '') + id + '.png';
 function playCry(id, rate) {
   if (SETTINGS.gachaMute) return;
   try {
@@ -513,7 +513,7 @@ async function startBattle() {
   if (!DEX.starter) { openDex(); return; }
   DEX.lv = DEX.lv || {}; DEX.xp = DEX.xp || {};
   const ids = (DEX.team.length ? DEX.team : [DEX.starter]).slice(0, 6);
-  const team = ids.map(id => { const L = monLvl(id), max = maxHp(L), mv = movesOf(id); return { id, L, max, hp: max, name: UP(id), back: loadImg(backUrl(id), SPRITE.front(id)), moves: mv, pp: { a: mv[0].pp, b: mv[1].pp } }; });
+  const team = ids.map(id => { const L = monLvl(id), max = maxHp(L), mv = movesOf(id); return { id, L, max, hp: max, name: UP(id), back: loadImg(backUrl(id, shinyShown(id)), shinyShown(id) ? SPRITE.shiny(id) : SPRITE.front(id)), moves: mv, pp: { a: mv[0].pp, b: mv[1].pp } }; });
   const id = WILD.id, lvl = WILD.lvl;
   BT = {
     id, lvl, tier: TIER_OF[id], name: UP(id), shiny: WILD.shiny, gender: TIER_OF[id] === 'legendaire' ? '' : Math.random() < 0.5 ? '♂' : '♀',
@@ -739,13 +739,13 @@ async function throwBall(kind, label, bonus) {
     fxRun(700, p => { [-1, 0, 1].forEach(k => { const x = 176 + k * 14 * p, y = 59 - 18 * p + (k ? 4 * p : 0); bx.globalAlpha = 1 - p * 0.7; P(x - 1, y - 3, 2, 6, '#f8e060'); P(x - 3, y - 1, 6, 2, '#f8e060'); P(x, y, 1, 1, '#ffffff'); bx.globalAlpha = 1; }); });
     stopMusic(); await btWait(250);
     bs.mel([72, 0, 72, 76, 79, 0, 76, 79, 84, 0, 84], 0.1); bs.mel([48, 0, 52, 0, 55, 0, 52, 0, 60], 0.12, 'triangle', 0.05);
-    const wasTeam = DEX.team.length, res = catchMon(BT.id);
-    stat('wild'); if (BT.shiny) { stat('shinies'); DEX.coins = (DEX.coins || 0) + 20; saveDex(); }
+    const wasTeam = DEX.team.length, res = catchMon(BT.id, BT.shiny);
+    stat('wild');
     await btSay('Et hop ! ' + BT.name + ' est attrapé !', 3000);
     await gainXp();
     if (res.isNew) await btSay('Les données de ' + BT.name + ' ont été ajoutées au POKéDEX.');
     else { if (BT.double) { DEX.coins += res.coins; saveDex(); } await btSay('Vous l\'aviez déjà : +' + res.coins * (BT.double ? 2 : 1) + ' pièces.'); }
-    if (BT.shiny) await btSay('Un POKéMON chromatique ! +20 pièces.');
+    if (BT.shiny) await btSay('Un POKéMON chromatique ! +' + SHINY_BONUS + ' pièces. Il gardera ses couleurs dans ton jardin.');
     if (DEX.team.length > wasTeam) await btSay(BT.name + ' rejoint ton jardin !');
     news('🌿', dexName(BT.id) + ' sauvage attrapé dans les hautes herbes !' + (res.isNew ? ' Nouveau !' : ''), 'party');
     updateDexButton();

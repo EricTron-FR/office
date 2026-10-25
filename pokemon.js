@@ -252,10 +252,11 @@ function pmdBox(img, fw, fh) {                          // hauteur des pieds et 
     return foot > top ? { top, foot } : { top: 0, foot: fh };
   } catch { return { top: fh * 0.2, foot: fh * 0.8 }; }
 }
-function pmdOf(id) {
-  let e = PMDS.get(id); if (e) return e;
-  e = { anims: {} }; PMDS.set(id, e);
-  const dir = PMD + String(id).padStart(4, '0') + '/';
+function pmdOf(id, shiny) {
+  const key = id + (shiny ? 's' : '');
+  let e = PMDS.get(key); if (e) return e;
+  e = { anims: {} }; PMDS.set(key, e);
+  const dir = PMD + String(id).padStart(4, '0') + '/' + (shiny ? '0000/0001/' : '');       // 0000/0001 = version chromatique
   fetch(dir + 'AnimData.xml').then(r => r.ok ? r.text() : Promise.reject(r.status)).then(txt => {
     const doc = new DOMParser().parseFromString(txt, 'text/xml'), by = {};
     doc.querySelectorAll('Anim').forEach(a => { const n = a.querySelector('Name'); if (n) by[n.textContent] = a; });
@@ -275,7 +276,8 @@ function pmdOf(id) {
 }
 // dessine le Pokémon animé ; renvoie la hauteur visible (0 si pas de sprite animé dispo → icône)
 function drawPmd(m, x, y) {
-  const e = pmdOf(m.dex), A = e.anims, ok = n => A[n] && A[n].ok;
+  const sh = typeof shinyShown === 'function' && shinyShown(m.dex), es = sh ? pmdOf(m.dex, true) : null;
+  const e = es && ((es.anims.Walk && es.anims.Walk.ok) || (es.anims.Idle && es.anims.Idle.ok)) ? es : pmdOf(m.dex), A = e.anims, ok = n => A[n] && A[n].ok;
   if (!ok('Walk') && !ok('Idle')) return 0;
   const moving = m.path.length > 0 || m.water;
   const name = m.mode === 'sleep' && !m.water && ok('Sleep') ? 'Sleep'
@@ -302,6 +304,14 @@ HOOKS.items.push((items, t) => {
     if (m.mode === 'spark') for (let i = 0; i < 6; i++) { const a = t * 9 + i, r = 11 + (i % 2) * 3; R(x + Math.round(Math.cos(a) * r), y - 12 + Math.round(Math.sin(a) * r * 0.7), 2, 1, i % 2 ? '#fff6a0' : '#f6d33c'); }
     if (m.mode === 'sing') for (let i = 0; i < 3; i++) { const q = (t * 0.6 + i / 3) % 1; g.globalAlpha = 1 - q; icon('note', x - 2 + (i - 1) * 7, y - 26 - Math.round(q * 14), ['#ff8fb0', '#9fc8ff', '#ffd166'][i]); g.globalAlpha = 1; }
     if (m.mode === 'sleep' && !m.water) { const p = (t * 0.4 + MONS.indexOf(m) * 0.3) % 1; g.globalAlpha = 1 - p; pixText('z', x + 6 + Math.round(p * 5), y - 24 - Math.round(p * 8), '#ffffff'); g.globalAlpha = 1; }
+    if (typeof shinyShown === 'function' && shinyShown(m.dex)) {      // chromatique : des étincelles de temps en temps
+      const q = (t * 0.35 + MONS.indexOf(m) * 0.37) % 1;
+      if (q < 0.35) [[-9, -18], [8, -22], [-4, -28], [10, -10]].forEach(([dx, dy], k) => {
+        const s = Math.max(0, Math.round(Math.sin(Math.min(1, q / 0.35 * 1.4 - k * 0.12) * Math.PI) * 2)); if (!s) return;
+        const sx = x + dx, sy = y + dy, c = k % 2 ? '#fff6a0' : '#ffffff';
+        R(sx, sy - s, 1, s * 2 + 1, c); R(sx - s, sy, s * 2 + 1, 1, c);
+      });
+    }
     if (m.petUntil > performance.now()) for (let i = 0; i < 2; i++) { const p = (t * 0.9 + i / 2) % 1; g.globalAlpha = 1 - p; icon('heart', x - 4 + i * 5, y - 28 - Math.round(p * 10), '#e0533f'); g.globalAlpha = 1; }
     m._anchor = { x, y: y - Math.max(18, hh), fy: y };
     m._box = [x - 12, y - Math.max(18, hh), 24, Math.max(18, hh) + 1];
@@ -371,7 +381,7 @@ cv.addEventListener('click', () => {
 });
 HOOKS.overlay.push(c => {
   if (!hoverMon || !hoverMon._anchor) return;
-  const m = hoverMon, txt = (m.wild ? '🌿 ' + m.name + ' sauvage' : '★ ' + m.name) + ' · ' + (m.petUntil > performance.now() ? 'Content !' : (m.label || MON_LABEL[m.mode] || 'Se balade')) + ' · clic pour un câlin';
+  const m = hoverMon, txt = (m.wild ? '🌿 ' + m.name + ' sauvage' : (typeof shinyShown === 'function' && shinyShown(m.dex) ? '✨ ' + m.name + ' chromatique' : '★ ' + m.name)) + ' · ' + (m.petUntil > performance.now() ? 'Content !' : (m.label || MON_LABEL[m.mode] || 'Se balade')) + ' · clic pour un câlin';
   c.font = '600 11px ' + FONT; const w = Math.ceil(c.measureText(txt).width) + 16;
   const [x, y0] = toCss(m._anchor.x, m._anchor.y), y = y0 - 4;
   pkBox(c, x - w / 2, y - 17, w, 17, '#f2b23a');

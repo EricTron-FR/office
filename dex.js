@@ -41,8 +41,13 @@ const SPRITE = {
   // icône du jardin : gén. 7 (≤ 807), Épée/Bouclier, Champions, sinon le sprite normal (réduit à l'affichage)
   icon: id => SP + ({ 7: 'versions/generation-vii/icons/', 8: 'versions/generation-viii/sword-shield/icons/', 9: 'versions/generation-ix/champions/icons/' }[(DEXI[id - 1] || {}).icon] || '') + id + '.png',
   // grand sprite : Rouge Feu (≤ 386), Noir/Blanc (≤ 649), sinon le sprite normal
-  front: id => SP + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/' : id <= 649 ? 'versions/generation-v/black-white/' : '') + id + '.png'
+  front: id => SP + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/' : id <= 649 ? 'versions/generation-v/black-white/' : '') + id + '.png',
+  // version chromatique du grand sprite
+  shiny: id => SP + (id <= 386 ? 'versions/generation-iii/firered-leafgreen/shiny/' : id <= 649 ? 'versions/generation-v/black-white/shiny/' : 'shiny/') + id + '.png'
 };
+// chromatiques : 1 chance sur 100 au gacha (1 sur 64 dans les hautes herbes) ; ils gardent leurs couleurs au jardin
+const SHINY_RATE = 1 / 100, SHINY_BONUS = 20;
+const shinyShown = id => !!(DEX.shiny && DEX.shiny[id]) && !(DEX.shinyOff && DEX.shinyOff[id]);
 
 /* ---------- sauvegarde ---------- */
 const DEX = Object.assign({ tickets: 0, coins: 0, caught: {}, team: [], pulls: 0, starter: null, day: '', tools: 0, log: [], pullRegion: 'Toutes' },
@@ -90,18 +95,19 @@ function rollMon(ball) {
   const id = fresh.length && Math.random() < 0.6 ? pick(fresh) : pick(pool);
   return { id, tier };
 }
-function catchMon(id) {
-  const isNew = !DEX.caught[id];
+function catchMon(id, shiny) {
+  const isNew = !DEX.caught[id], newShiny = !!shiny && !(DEX.shiny && DEX.shiny[id]);
   DEX.caught[id] = (DEX.caught[id] || 0) + 1; DEX.pulls++;
   let coins = 0;
   if (!isNew) { coins = COINS[TIER_OF[id]]; DEX.coins = (DEX.coins || 0) + coins; }
   if (isNew) { DEX.got = DEX.got || {}; DEX.got[id] = Date.now(); }
+  if (shiny) { DEX.shiny = DEX.shiny || {}; DEX.shiny[id] = 1; stat('shinies'); coins += SHINY_BONUS; DEX.coins = (DEX.coins || 0) + SHINY_BONUS; }
   if (isNew && DEX.team.length < 6) { DEX.team.push(id); if (typeof setGardenTeam === 'function') setGardenTeam(DEX.team); }
   stat('pulls'); if (isNew) stat('newmons');
   const t = TIER_OF[id]; if (t === 'epique') stat('epics'); if (t === 'legendaire') stat('legends'); if (dexEl(id, 'g')) stat('ghosts');
   DEX.log.unshift({ id, at: Date.now() }); DEX.log.length = Math.min(DEX.log.length, 30);
   saveDex();
-  return { isNew, coins };
+  return { isNew, coins, shiny: !!shiny, newShiny };
 }
 
 /* ---------- interface : la fenêtre Pokédex ---------- */
@@ -214,7 +220,7 @@ function openMulti(n) {
     let r; do { r = Object.assign({ ball: 'hyper' }, rollMon('hyper')); } while (TIERS.indexOf(r.tier) < 2);
     rolls[n - 1] = r;
   }
-  const items = rolls.map(r => { if (r.ball === 'master') stat('masters'); const res = catchMon(r.id); return Object.assign(r, res); });
+  const items = rolls.map(r => { if (r.ball === 'master') stat('masters'); const res = catchMon(r.id, Math.random() < SHINY_RATE); return Object.assign(r, res); });
   if (n >= 10) stat('multi10');
   const fresh = items.filter(i => i.isNew).length, best = items.slice().sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier))[0];
   if (typeof pushNews === 'function') pushNews('📕', 'Rafale ×' + n + ' : ' + fresh + ' nouveau' + (fresh > 1 ? 'x' : '') + ', meilleur : ' + dexName(best.id) + ' (' + TIER_LABEL[best.tier] + ')', fresh ? 'party' : '');
@@ -237,9 +243,9 @@ function spin(body) {
   gachaWheel(ball, slot, wheelAngle).then(ang => { wheelAngle = ang; openBall(ball); });
 }
 function openBall(ball) {
-  const { id, tier } = rollMon(ball), res = catchMon(id);
+  const { id, tier } = rollMon(ball), res = catchMon(id, Math.random() < SHINY_RATE);
   if (ball === 'master') stat('masters');
-  if (typeof pushNews === 'function') pushNews('📕', (res.isNew ? 'Nouveau Pokémon : ' : 'Encore un ') + dexName(id) + ' (' + TIER_LABEL[tier] + ')', res.isNew ? 'party' : '');
+  if (typeof pushNews === 'function') pushNews(res.shiny ? '✨' : '📕', (res.shiny ? 'CHROMATIQUE ! ' : '') + (res.isNew ? 'Nouveau Pokémon : ' : 'Encore un ') + dexName(id) + ' (' + TIER_LABEL[tier] + ')', res.isNew || res.shiny ? 'party' : '');
   updateDexButton();
   const done = action => {
     spinning = false;
@@ -247,7 +253,7 @@ function openBall(ball) {
     renderDex();
     if (action === 'again') { const go = $dex.querySelector('.dx-go'); if (go) go.click(); }
   };
-  if (typeof gachaShow === 'function') gachaShow(ball, { id, tier, isNew: res.isNew, coins: res.coins }, done); else done('ok');
+  if (typeof gachaShow === 'function') gachaShow(ball, { id, tier, isNew: res.isNew, coins: res.coins, shiny: res.shiny }, done); else done('ok');
 }
 
 // le Pokédex : par région, silhouettes pour ceux qu'il reste à attraper
@@ -268,7 +274,7 @@ function renderGrid(body) {
     if (!dexMatch(id, q)) continue;
     const n = DEX.caught[id] || 0, tier = TIER_OF[id];
     h += '<div class="dx-cell' + (n ? ' got' : '') + (DEX.team.includes(id) ? ' team' : '') + '" title="' + (n ? esc(dexName(id)) + ' · ' + TIER_LABEL[tier] + ' · taux de capture ' + CAPTURE[id - 1] + ' · ×' + n : '??? · ' + TIER_LABEL[tier]) + '" data-id="' + id + '">' +
-      '<span class="num">' + String(id).padStart(3, '0') + '</span>' + imgTag(id, 'icon', n ? '' : 'sil') +
+      '<span class="num">' + String(id).padStart(3, '0') + '</span>' + (DEX.shiny && DEX.shiny[id] ? '<span class="sh" title="Tu as sa version chromatique">✨</span>' : '') + imgTag(id, 'icon', n ? '' : 'sil') +
       '<span class="nm">' + (n ? esc(dexName(id)) : '???') + '</span>' + (n > 1 ? '<span class="cnt">×' + n + '</span>' : '') +
       '<i style="background:' + TIER_COLOR[tier] + '"></i></div>';
   }
@@ -318,9 +324,11 @@ function renderTeam(body) {
   const drawSlots = () => {
     slots.innerHTML = [0, 1, 2, 3, 4, 5].map(i => {
       const id = DEX.team[i];
-      return id ? '<div class="dx-slot" data-rm="' + id + '">' + imgTag(id, 'front', 'mid') + '<b>' + esc(dexName(id)) + '</b><small>retirer</small></div>' : '<div class="dx-slot empty">vide</div>';
+      return id ? '<div class="dx-slot" data-rm="' + id + '">' + imgTag(id, shinyShown(id) ? 'shiny' : 'front', 'mid') + '<b>' + esc(dexName(id)) + (shinyShown(id) ? ' ✨' : '') + '</b><small>retirer</small>' +
+        (DEX.shiny && DEX.shiny[id] ? '<button class="dx-shtog" data-sh="' + id + '" title="Afficher la version chromatique ou normale au jardin">' + (shinyShown(id) ? '✨ chromatique' : '◯ normal') + '</button>' : '') + '</div>' : '<div class="dx-slot empty">vide</div>';
     }).join('');
     slots.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.rm); drawSlots(); drawList(); });
+    slots.querySelectorAll('[data-sh]').forEach(el => el.onclick = e => { e.stopPropagation(); const id = +el.dataset.sh; DEX.shinyOff = DEX.shinyOff || {}; DEX.shinyOff[id] = !DEX.shinyOff[id]; saveDex(); drawSlots(); });
   };
   let shown = 0;
   const drawList = (more) => {
@@ -328,7 +336,7 @@ function renderTeam(body) {
     shown = more ? shown + 120 : Math.max(120, shown);
     cnt.textContent = list.length === total ? 'Tes Pokémon (' + total + ')' : list.length + ' sur ' + total + ' Pokémon';
     pickEl.innerHTML = list.slice(0, shown).map(id => '<button data-add="' + id + '" class="' + (DEX.team.includes(id) ? 'in' : '') + '" title="#' + id + ' · ' + TIER_LABEL[TIER_OF[id]] + ' · ×' + DEX.caught[id] + '">' +
-      imgTag(id, 'icon') + '<span>' + esc(dexName(id)) + '</span><i style="background:' + TIER_COLOR[TIER_OF[id]] + '"></i></button>').join('') +
+      imgTag(id, 'icon') + '<span>' + esc(dexName(id)) + (DEX.shiny && DEX.shiny[id] ? ' ✨' : '') + '</span><i style="background:' + TIER_COLOR[TIER_OF[id]] + '"></i></button>').join('') +
       (list.length > shown ? '<button class="dx-more">Voir plus (' + (list.length - shown) + ')</button>' : '') +
       (!list.length ? '<div class="dx-hint">Aucun Pokémon ne correspond.</div>' : '');
     pickEl.querySelectorAll('[data-add]').forEach(el => el.onclick = () => { toggleTeam(+el.dataset.add); drawSlots(); el.classList.toggle('in', DEX.team.includes(+el.dataset.add)); if (f.out) drawList(); });

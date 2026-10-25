@@ -32,6 +32,7 @@ const BADGES = [
   ['sauvage', 'Badge Herbe Haute', 'Attrape un Pokémon sauvage dans les hautes herbes', 'leaf', '#6cc75a', () => [stv('wild'), 1], 2],
   ['chasseur', 'Badge Chasseur', '15 Pokémon sauvages attrapés', 'star', '#2e7d36', () => [stv('wild'), 15], 4],
   ['mainverte', 'Badge Main Verte', 'Récolte 20 baies dans ton potager', 'leaf', '#8ad04a', () => [stv('harvest'), 20], 3],
+  ['etincelle', 'Badge Étincelle', 'Obtiens un Pokémon chromatique', 'star', '#ffe36a', () => [stv('shinies'), 1], 5],
   ['maitre', 'Badge Maître Pokémon', '500 Pokémon différents', 'trophy', '#ffd166', () => [caughtCount(), 500], 25]
 ];
 // défis du jour : [stat, objectif, intitulé, tickets]

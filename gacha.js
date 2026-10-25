@@ -145,7 +145,8 @@ async function gachaShow(ball, result, onEnd) {
   $grays.classList.add('on');
   // 5. le Pokémon
   $gstage.innerHTML = '<div class="g-reveal">' +
-    '<div class="g-mon"><img src="' + SPRITE.front(id) + '" alt=""></div>' +
+    '<div class="g-mon' + (result.shiny ? ' shiny' : '') + '"><img src="' + (result.shiny ? SPRITE.shiny(id) : SPRITE.front(id)) + '" alt=""></div>' +
+    (result.shiny ? '<div class="g-banner shiny">✨ CHROMATIQUE ! ✨</div>' : '') +
     (legend ? '<div class="g-banner">LÉGENDAIRE !!!</div>' : tier === 'epique' ? '<div class="g-banner epic">ÉPIQUE !</div>' : '') +
     '<div class="g-num">N° ' + String(id).padStart(3, '0') + '</div><div class="g-name"></div>' +
     '<div class="g-stars">' + '★★★★★'.split('').map((s, i) => '<span class="' + (i < STARS[tier] ? 'lit' : '') + '">★</span>').join('') + '</div>' +
@@ -212,7 +213,7 @@ async function gachaMulti(items, onEnd) {
     // ouverture
     if (it.isNew) fresh++; else coins += it.coins || 0;
     card.classList.remove('shake'); card.classList.add('open', 't-' + it.tier);
-    card.innerHTML = '<div class="g-cglow"></div><img src="' + SPRITE.front(it.id) + '" alt=""><b>' + esc(dexName(it.id)) + '</b>' +
+    card.innerHTML = '<div class="g-cglow"></div><img src="' + (it.shiny ? SPRITE.shiny(it.id) : SPRITE.front(it.id)) + '" alt=""><b>' + (it.shiny ? '✨ ' : '') + esc(dexName(it.id)) + '</b>' +
       '<span class="g-cstars">' + '★'.repeat(STARS[it.tier]) + '</span>' + (it.isNew ? '<i class="g-cnew">NEW</i>' : '<i class="g-cdup">+' + (it.coins || 0) + ' 🪙</i>');
     burst(cx, cy, [14, 20, 34, 70, 140][T], [tc, '#ffffff', T >= 3 ? '#ffe08a' : tc], { speed: 4 + T * 1.6, g: 0.12, size: 4 + T });
     melody([72 + T * 2, 76 + T * 2, 79 + T * 2].slice(0, 1 + Math.min(2, T)), 0.06);
