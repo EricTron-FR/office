@@ -2,7 +2,7 @@
 /* ====================================================================
    Eric Office : ambiance et fun
    nuit éclairée · laser pour les chats · chat sur le clavier · employé du jour
-   papotes + baby-foot · réactions d'Eric · pizza · robot aspirateur · saisons
+   papotes · réactions d'Eric · pizza · robot aspirateur · saisons
    ==================================================================== */
 const news = (icon, text, kind) => { if (typeof pushNews === 'function') pushNews(icon, text, kind); };
 const NOW = () => performance.now();
@@ -32,7 +32,6 @@ function collectLights(t) {
   add(px(-6) + 4, py(7) - 4, 22, 0.7, '#ffe9b0');               // lampe du bureau
   add(px(29) + 8, OYp + 16, 26, 0.8, CLAY);                     // néon étincelle
   add(px(31), py(3), 26, 0.6, '#fff1d6');                       // distributeur
-  add(px(3) + 8, py(17) - 4, 18, 0.7, VIOLET); add(px(4) + 8, py(17) - 4, 18, 0.7, BLUE);   // bornes d'arcade
   if (someone(a => a.act === 'tv' && a.mode === 'sit')) add(px(27), py(13), 40, 0.8, [BLUE, VIOLET, CLAY, GREEN][Math.floor(t * 0.8) % 4]);
   add(px(-7) + 2, py(11) - 3, 18, 0.6, '#5aa3c9');              // aquarium
   if (TV.on) add(TVRECT.x + TVRECT.w / 2, TVRECT.y + 22, 40, 0.8, [BLUE, VIOLET, CLAY][Math.floor(t * 0.5) % 3]);   // télé murale
@@ -147,43 +146,19 @@ HOOKS.floor.push(() => {   // cadre doré sous la plaque du CEO
   R(x0 + 5, y0 + 13, 4, 2, AMBER); R(x0 + 6, y0 + 12, 2, 1, AMBER);
 });
 
-/* ---------- 5. vie sociale : papotes + baby-foot ---------- */
+/* ---------- 5. vie sociale : papotes ---------- */
 SPOTS.push(
   { cell: [24, 5], face: 'right', label: 'Papote près du café', w: 5, act: 'chat' },
-  { cell: [26, 5], face: 'left', label: 'Papote près du café', w: 5, act: 'chat' },
-  { cell: [-2, 23], face: 'right', label: 'Baby-foot', w: 6, act: 'babyfoot' },
-  { cell: [1, 23], face: 'left', label: 'Baby-foot', w: 6, act: 'babyfoot' }
+  { cell: [26, 5], face: 'left', label: 'Papote près du café', w: 5, act: 'chat' }
 );
-block(-1, 23); block(0, 23);
 const EMOJIS = ['☕', '😂', '💡', '🐱', '🎮', '🍕', '👀', '🔥', '🤔', '🎉', '🐛', '🚀'];
 const parked = a => !a.path.length && !a.heading && !a.seat;
-furniture.push({   // table de baby-foot
-  k: py(24) - 2, draw(t) {
-    const x0 = px(-1) + 2, w = 28, y0 = py(23) + 1;
-    const p1 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === -2);
-    const p2 = everyone().find(a => parked(a) && a.act === 'babyfoot' && cellOf(a)[0] === 1);
-    R(x0, y0 + 13, w + 1, 2, SHADOW);
-    panel(x0, y0, w, 11, '#5e3a28'); R(x0 + 2, y0 + 2, w - 4, 7, '#5d9a5f');
-    R(x0 + 13, y0 + 2, 1, 7, '#e9f2e0'); R(x0 + 2, y0 + 4, 1, 3, '#e9f2e0'); R(x0 + w - 3, y0 + 4, 1, 3, '#e9f2e0');
-    R(x0 + 1, y0 + 4, 1, 3, '#1b1a19'); R(x0 + w - 2, y0 + 4, 1, 3, '#1b1a19');            // buts
-    [5, 10, 17, 22].forEach((rx, i) => {                                                    // barres + joueurs
-      R(x0 + rx, y0 - 2, 1, 15, '#b9c0c4');
-      const off = (p1 && p2) ? Math.round(Math.sin(t * 5 + i) * 1.5) : 0;
-      R(x0 + rx - 1, y0 + 3 + off, 3, 2, i % 2 ? BLUE : CLAY); R(x0 + rx - 1, y0 + 6 + off, 3, 2, i % 2 ? BLUE : CLAY);
-    });
-    panel(x0 + 2, y0 + 11, 3, 4, '#4a2e22'); panel(x0 + w - 5, y0 + 11, 3, 4, '#4a2e22');
-    if (p1 && p2) {                                                                          // la balle
-      const bx = x0 + 3 + Math.round((Math.sin(t * 2.3) * 0.5 + 0.5) * (w - 7)), by = y0 + 3 + Math.round((Math.sin(t * 3.7) * 0.5 + 0.5) * 4);
-      R(bx, by, 2, 2, '#ffffff');
-    }
-  }
-});
 HOOKS.update.push((dt, now) => {   // deux agents proches en pause se tournent l'un vers l'autre et papotent
   const idle = everyone().filter(a => parked(a) && !WORK.has(a.state) && a.state !== 'asleep');
   idle.forEach(a => { a.chatWith = null; });
   for (let i = 0; i < idle.length; i++) for (let j = i + 1; j < idle.length; j++) {
     const a = idle[i], b = idle[j];
-    if (a.chatWith || b.chatWith || a.act === 'babyfoot' || b.act === 'babyfoot') continue;
+    if (a.chatWith || b.chatWith || a.act === 'pokeplay' || b.act === 'pokeplay') continue;
     if (Math.hypot(a.x - b.x, a.y - b.y) <= 2.2) {
       a.chatWith = b; b.chatWith = a;
       if (Math.abs(a.x - b.x) >= Math.abs(a.y - b.y)) { a.face = a.x < b.x ? 'right' : 'left'; b.face = a.x < b.x ? 'left' : 'right'; }
@@ -201,8 +176,8 @@ HOOKS.overlay.push((c, t) => {
     if (!speaker._anchor) return;
     const e = EMOJIS[(hash(a.id + a.chatWith.id) + Math.floor(t / 3.2)) % EMOJIS.length];
     const [x, y] = toCss(speaker._anchor.x, speaker._anchor.y);
-    c.fillStyle = 'rgba(255,253,248,.95)'; c.beginPath(); c.roundRect(x - 12, y - 26, 24, 20, 8); c.fill();
-    c.beginPath(); c.moveTo(x - 3, y - 7); c.lineTo(x, y - 2); c.lineTo(x + 3, y - 7); c.fill();
+    c.fillStyle = '#111018'; c.beginPath(); c.moveTo(x - 4, y - 8); c.lineTo(x, y - 1); c.lineTo(x + 4, y - 8); c.fill();
+    pkBox(c, x - 12, y - 27, 24, 20, null);
     c.font = '13px "Segoe UI Emoji", sans-serif'; c.textAlign = 'center'; c.fillText(e, x, y - 15); c.textAlign = 'left';
   });
 });
@@ -213,6 +188,7 @@ function onAgentDone(a) {
   news('✅', a.name + ' a terminé sa tâche', 'done');
   if (owner) ericEmote = { icon: '👏', until: NOW() + 3500 };
   checkPizza();
+  if (typeof dexOnDone === 'function') dexOnDone(a);              // un ticket Pokédex (dex.js)
   if (typeof onDoneEvent === 'function') onDoneEvent(a);          // événements (anniversaire…) : events.js
 }
 let nextCoffeeRun = NOW() + 90000 + Math.random() * 90000;
@@ -310,27 +286,15 @@ HOOKS.items.push((items, t) => {
 });
 
 /* ---------- 8bis. touche Pokémon : peluches, Pokéballs, console ---------- */
-const PY = '#f6d33c', PYd = '#d9a91f';
-function plushMouse(x, y) {            // souris électrique jaune, assise ; y = bas des pattes
-  R(x - 4, y - 13, 2, 4, PY); R(x - 4, y - 14, 2, 2, OUT); R(x + 3, y - 13, 2, 4, PY); R(x + 3, y - 14, 2, 2, OUT);
-  panel(x - 4, y - 9, 9, 8, PY, OUT);
-  R(x - 2, y - 7, 1, 1, OUT); R(x + 2, y - 7, 1, 1, OUT); R(x - 3, y - 5, 2, 1, '#e3350d'); R(x + 2, y - 5, 2, 1, '#e3350d'); R(x, y - 5, 1, 1, '#8a5a20');
-  R(x - 3, y - 1, 2, 1, PYd); R(x + 2, y - 1, 2, 1, PYd);
-  R(x + 5, y - 4, 2, 1, PY); R(x + 6, y - 6, 1, 2, PY); R(x + 6, y - 7, 3, 1, PY); R(x + 8, y - 10, 1, 3, PY); R(x + 5, y - 3, 1, 2, '#8a5a20');
+// peluches = sprites officiels (icônes PokeAPI, voir pokemon.js)
+function plush(id, cx, by, flip) {
+  const e = iconOf(id); if (!e.ok) return;
+  const im = flip ? e.flip : e.img; g.drawImage(im, Math.round(cx - im.width / 2), Math.round(by - im.height + 4));
 }
-function plushPink(x, y) {             // boule rose qui chante
-  panel(x - 4, y - 8, 9, 8, '#f6a5c0', OUT); R(x - 1, y - 10, 3, 2, '#f6a5c0'); R(x, y - 9, 1, 1, '#e07aa0');
-  R(x - 3, y - 6, 2, 2, '#ffffff'); R(x + 2, y - 6, 2, 2, '#ffffff'); R(x - 2, y - 5, 1, 1, '#3a6aa0'); R(x + 3, y - 5, 1, 1, '#3a6aa0');
-  R(x - 4, y - 9, 2, 2, '#f6a5c0'); R(x + 3, y - 9, 2, 2, '#f6a5c0'); R(x, y - 3, 1, 1, '#c25b6a');
-}
-function plushBulb(x, y) {             // bestiole à bulbe
-  panel(x - 2, y - 12, 6, 5, '#4f9a5a', OUT); R(x - 1, y - 12, 2, 1, '#6fb87a');
-  panel(x - 5, y - 7, 10, 6, '#7ccfb0', OUT); R(x - 3, y - 4, 2, 1, '#5aa890'); R(x + 2, y - 3, 2, 1, '#5aa890');
-  R(x - 3, y - 6, 1, 1, '#c8392a'); R(x + 2, y - 6, 1, 1, '#c8392a'); R(x - 6, y - 8, 2, 2, '#7ccfb0'); R(x + 5, y - 8, 2, 2, '#7ccfb0');
-}
-furniture.push({ k: py(SOFA.y) + 15.3, draw() { plushMouse(px(SOFA.x) - 2, py(SOFA.y) - 2); } });       // sur l'accoudoir
-furniture.push({ k: py(3) + 8.6, draw() { plushPink(px(-3) + 8, py(3) - 28); pokeball(px(-2) + 6, py(3) - 30, true); } });   // sur la vitrine du patron
-furniture.push({ k: py(3) + 8.6, draw() { plushBulb(px(13) + 6, py(3) - 26); } });  // sur la bibliothèque
+furniture.push({ k: py(SOFA.y) + 15.3, draw() { plush(25, px(SOFA.x) - 2, py(SOFA.y) + 2); } });            // Pikachu sur l'accoudoir
+furniture.push({ k: py(3) + 8.6, draw() { pokeball(px(-2) + 8, py(3) - 31, true); } });                     // sur la vitrine du patron
+furniture.push({ k: py(12) + 2.5, draw() { plush(39, px(-7) + 4, py(11) - 9); } });                           // Rondoudou sur l'aquarium
+furniture.push({ k: py(3) + 8.6, draw() { plush(1, px(13) + 8, py(3) - 24, true); } });  // Bulbizarre sur la bibliothèque
 HOOKS.post.push(() => {   // console portable rétro sur la table basse
   const x0 = px(26) + 11, y0 = py(12) + 2;
   if (NOW() < pizzaUntil) return;

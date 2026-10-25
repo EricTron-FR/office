@@ -159,7 +159,7 @@ function renderDetail(force) {
   if (us) $detail.querySelector('.fame').insertAdjacentHTML('beforeend', '<div style="color:var(--mute);margin-top:3px">📊 ' + fmtTok(us.tokens) + ' tokens · ' + us.msgs + ' réponses · ' + fmtUsd(us.cost) + ' (7 j)</div>');
   $detail.querySelector('[data-a=rename]').onclick = () => {
     const acts = $detail.querySelector('.acts');
-    acts.innerHTML = '<input type="text" maxlength="40" style="flex:1;min-width:0;background:#1f1e1d;border:1px solid var(--clay);color:var(--cream);border-radius:6px;padding:4px 8px;font:inherit">' +
+    acts.innerHTML = '<input type="text" maxlength="40" style="flex:1;min-width:0;background:var(--field);border:1px solid var(--clay);color:var(--fg);border-radius:6px;padding:4px 8px;font:inherit">' +
       '<button data-r="ok">OK</button><button class="ghost" data-r="reset" title="Revenir au nom du projet">↺</button>';
     const inp = acts.querySelector('input'); inp.value = a.title; inp.focus(); inp.select();
     const done = v => { setNick(a, v); avatars.delete(a.id); renderList(true); renderDetail(true); };
@@ -204,9 +204,9 @@ tool('⤢', 'Tout voir', () => { VIEW.z = 1; VIEW.cx = W / 2; VIEW.cy = H / 2; }
 sep();
 { // aller dans une pièce
   const PLACES = [['Tout le bureau', null], ['Bureau de ' + OWNER, [-8, -1, 0, 14]], ['Open space', [0, 22, 0, 14]], ['Salle de pause', [23, 32, 0, 14]],
-    ['Terrasse', [32, 42, 0, 14]], ['Salle de jeux', [-8, 5, 14, 28]], ['Salle de tests', [5, 17, 14, 28]], ['Salle serveur', [17, 27, 14, 28]], ['Bibliothèque', [27, 42, 14, 28]]];
+    ['Terrasse', [32, 42, 0, 14]], ['Jardin suspendu', [-8, 27, 14, 28]], ['Bibliothèque', [27, 42, 14, 28]]];
   const sel = document.createElement('select');
-  sel.style.cssText = 'background:rgba(31,30,29,.8);border:1px solid #4a4743;color:var(--cream);border-radius:8px;padding:4px 6px;font:inherit;font-size:12px;cursor:pointer';
+  sel.style.cssText = 'background:var(--field);border:2px solid var(--ink);color:var(--fg);border-radius:8px;padding:4px 6px;font:inherit;font-size:12px;cursor:pointer';
   sel.innerHTML = '<option value="">📍 Aller à…</option>' + PLACES.map((p, i) => '<option value="' + i + '">' + esc(p[0]) + '</option>').join('');
   sel.onchange = () => {
     const p = PLACES[+sel.value]; if (!p) return;
@@ -242,7 +242,7 @@ async function loadUsage() {
 function renderUsage() {
   if (!USAGE) return;
   const U = USAGE, max = Math.max(1, ...U.days.map(d => d.tokens)), J = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
-  const tile = (l, b) => '<div style="flex:1;background:#1f1e1d;border-radius:8px;padding:7px 9px"><div style="font-size:11px;color:var(--mute)">' + l + '</div>' +
+  const tile = (l, b) => '<div style="flex:1;background:var(--field);border-radius:8px;padding:7px 9px"><div style="font-size:11px;color:var(--mute)">' + l + '</div>' +
     '<div style="font-size:17px;font-weight:700">' + fmtTok(b.tokens) + '</div><div style="font-size:11px;color:var(--mute)">' + b.msgs + ' réponses · ' + fmtUsd(b.cost) + '</div></div>';
   const top = (obj, n, label) => Object.entries(obj).sort((p, q) => q[1].tokens - p[1].tokens).slice(0, n)
     .map(([k, b]) => '<div class="lg" style="justify-content:space-between"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px">' + esc(label(k)) + '</span><span style="color:var(--mute);white-space:nowrap">' + fmtTok(b.tokens) + ' · ' + fmtUsd(b.cost) + '</span></div>').join('') || '<div class="empty">Rien pour l\'instant.</div>';
@@ -332,7 +332,9 @@ function onMail(m) {
   pushNews('✉️', (from ? from.name : m.from) + ' → ' + (to ? to.name : m.to) + ' : ' + short);
   if (to) addLog(to, '📬 De ' + (from ? from.name : m.from) + ' : ' + short);
   if (from) addLog(from, '✉️ À ' + (to ? to.name : m.to) + ' : ' + short);
-  if (from && to) chatVisit(from, to);
+  if (from && to) chatVisit(from, to, m.text);
+  else if (from && typeof say === 'function') say(from, m.text, { to: to ? to.name : m.to });
+  MAILBOX.up = performance.now() + 20000;                     // le drapeau de la boîte aux lettres du jardin se lève
 }
 function onRunsChanged(r) {
   RUNS.forEach(run => {                             // le nom d'équipe suit le nom affiché dans le bureau
@@ -615,7 +617,7 @@ const $tvbox = document.createElement('div');
 $tvbox.style.cssText = 'position:absolute;display:none;overflow:hidden;z-index:1;pointer-events:none;background:#000';
 const $tvclose = document.createElement('button');
 $tvclose.textContent = '✕ Réduire'; $tvclose.className = 'ghost';
-$tvclose.style.cssText = 'position:absolute;display:none;z-index:4;padding:3px 9px;font-size:12px;background:rgba(31,30,29,.9)';
+$tvclose.style.cssText = 'position:absolute;display:none;z-index:4;padding:3px 9px;font-size:12px;background:var(--panel)';
 $stage.append($tvbox, $tvclose);
 const $tvpop = document.createElement('div'); $tvpop.className = 'pop'; $tvpop.hidden = true; $tvpop.style.cssText = 'left:auto;right:18px;min-width:330px';
 $stage.appendChild($tvpop);
@@ -673,7 +675,7 @@ function openTvPop() {
   [$legend, $settings, $usage].forEach(p => p.hidden = true);
   $tvpop.innerHTML = '<h3>📺 Télé de la cafet</h3>' +
     '<label style="font-size:12px;color:var(--mute)">Lien YouTube (vidéo, live ou playlist)</label>' +
-    '<input type="text" id="tvUrl" style="width:100%;margin:4px 0 8px;background:#1f1e1d;border:1px solid var(--line);color:var(--cream);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px" placeholder="https://www.youtube.com/watch?v=…">' +
+    '<input type="text" id="tvUrl" style="width:100%;margin:4px 0 8px;background:var(--field);border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px" placeholder="https://www.youtube.com/watch?v=…">' +
     '<div style="display:flex;gap:6px;flex-wrap:wrap"><button id="tvGo">▶ Allumer</button><button class="ghost" id="tvLofi">🎧 Mix Lofi Girl</button>' +
     (TV.on ? '<button class="ghost" id="tvBig">⤢ Agrandir</button><button class="ghost" id="tvStop">⏹ Éteindre</button>' : '') + '</div>' +
     '<label style="margin-top:10px"><input type="checkbox" id="tvMute"' + (SETTINGS.tvMuted ? ' checked' : '') + '> Sans le son (image seule)</label>' +
