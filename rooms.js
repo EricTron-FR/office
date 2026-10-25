@@ -533,14 +533,6 @@ deco(8, 17, py(17) + 14, t => {
   if (up) { R(cx + 6, by - 22, 1, 8, OUT); R(cx + 7, by - 22, 4, 3, '#ffd166'); }
   else { R(cx + 6, by - 13, 5, 1, OUT); R(cx + 7, by - 12, 4, 2, '#ffd166'); }
 });
-// panneau en bois
-deco(13, 18, py(18) + 14, () => {
-  const cx = px(13) + 8, by = py(18) + 14;
-  R(cx - 9, by, 18, 2, SHADOW); R(cx - 6, by - 6, 2, 6, '#6a3e22'); R(cx + 4, by - 6, 2, 6, '#6a3e22');
-  panel(cx - 14, by - 16, 28, 10, '#c8803e'); R(cx - 13, by - 15, 26, 1, '#e8a060');
-  pixText('JARDIN', cx - 11, by - 13, '#3a2214');
-});
-SPOTS.push({ cell: [13, 19], face: 'up', label: 'Lit le panneau du jardin', w: 2, ok: TERRACE_OK });
 // banc du jardin, contre la façade
 const GBENCH = [4, 5].map(x => seat([x, 18], { pos: [px(x) + 8, py(18) + 8], k: py(18) + 9, face: 'down', legs: 'sit', w: 6, ok: TERRACE_OK, label: 'Prend le soleil sur le banc', stand: [x, 19] }));
 GBENCH.forEach(s => { IDLE_SEATS.push(s); block(...s.cell); });

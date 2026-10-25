@@ -1245,7 +1245,7 @@ function updateCat(c, dt, now) {
     const [tx, ty] = c.path[0], tx2 = tx + 0.5, ty2 = ty + 0.5;
     const dx = tx2 - c.x, dy = ty2 - c.y, dist = Math.hypot(dx, dy), stp = c.speed * dt;
     if (Math.abs(dx) > 0.01) c.dir = dx > 0 ? 1 : -1;
-    c.face = Math.abs(dy) > Math.abs(dx) + 0.01 ? (dy > 0 ? 'down' : 'up') : 'side';
+    if (dist > 0.05) c.face = Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? 'down' : 'up') : 'side';
     if (dist <= stp) { c.x = tx2; c.y = ty2; c.path.shift(); if (!c.path.length) catArrive(c); }
     else { c.x += dx / dist * stp; c.y += dy / dist * stp; }
   }

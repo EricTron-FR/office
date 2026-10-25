@@ -330,11 +330,31 @@ function drawParty(now) {
     rbox(180, 136, 56, 18, m.cur === bi ? '#f8b850' : '#f8f8f8', '#304050'); txt('RETOUR', 208, 149, '#404040', null, 8.5, 'center', 700);
   }
 }
+// la Ball en pixel art (12 × 12, contour fin), comme les sprites du jeu ; en deux moitiés quand elle s'ouvre
+const BALL_ROWS = ['....OOOO....', '..OOTTTTOO..', '.OTTTTTTHHO.', '.OTTTTTTTHO.', 'OTTTTOOTTTTO', 'OOOOOWWOOOOO',
+  'OWWWOWWOWWWO', 'OWWWWOOWWWWO', '.OWWWWWWWWO.', '.OSWWWWWWSO.', '..OOSSSSOO..', '....OOOO....'];
+const BALL_COL = { poke: ['#f05038', '#ff9a80'], super: ['#3878e8', '#88b8ff'], hyper: ['#383848', '#686878'], master: ['#8848d0', '#c090f0'] };
+const BALL_DOTS = { super: [[2, 3, '#f05038'], [2, 8, '#f05038'], [3, 2, '#f05038'], [3, 9, '#f05038']], hyper: [[1, 4, '#f8d038'], [2, 3, '#f8d038'], [1, 7, '#f8d038'], [2, 8, '#f8d038']],
+  master: [[2, 3, '#ff90d0'], [2, 8, '#ff90d0'], [2, 5, '#ffffff'], [2, 6, '#ffffff'], [3, 5, '#ffffff'], [3, 6, '#ffffff']] };
+const BALLS_PX = new Map();
+function ballPx(kind, dark) {
+  const key = kind + (dark ? 'd' : ''); let c = BALLS_PX.get(key);
+  if (c) return c;
+  const [t, h] = BALL_COL[kind] || BALL_COL.poke, pal = { O: '#303040', T: t, H: h, W: '#f8f8f8', S: '#c8c8d8' };
+  c = document.createElement('canvas'); c.width = c.height = 12; const cc = c.getContext('2d');
+  BALL_ROWS.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== '.') { cc.fillStyle = dark ? mix(pal[ch], '#000000', 0.35) : pal[ch]; cc.fillRect(x, y, 1, 1); } }));
+  (BALL_DOTS[kind] || []).forEach(([y, x, col]) => { cc.fillStyle = dark ? mix(col, '#000000', 0.35) : col; cc.fillRect(x, y, 1, 1); });
+  BALLS_PX.set(key, c); return c;
+}
 function drawBall(b) {
-  bx.save(); bx.translate(b.x, b.y); bx.rotate(b.rot || 0);
-  if (b.open) { bx.globalAlpha = 0.6; P(-7, -7, 14, 14, '#ffffff'); bx.globalAlpha = 1; }
-  ballIcon(bx, 0, 0, 4.5, b.kind || 'poke');
-  if (b.dark) { bx.globalAlpha = 0.35; bx.fillStyle = '#000'; bx.beginPath(); bx.arc(0, 0, 6.5, 0, Math.PI * 2); bx.fill(); bx.globalAlpha = 1; }
+  const im = ballPx(b.kind || 'poke', b.dark);
+  bx.save(); bx.translate(Math.round(b.x), Math.round(b.y));
+  if (b.open) {                                      // lueur douce, et le haut de la Ball qui bascule
+    const gr = bx.createRadialGradient(0, 0, 1, 0, 0, 14); gr.addColorStop(0, 'rgba(255,255,255,.85)'); gr.addColorStop(0.5, 'rgba(255,230,230,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    bx.fillStyle = gr; bx.beginPath(); bx.arc(0, 0, 14, 0, Math.PI * 2); bx.fill();
+    bx.drawImage(im, 0, 6, 12, 6, -6, 0, 12, 6);
+    bx.save(); bx.translate(-6, 0); bx.rotate(-0.6); bx.drawImage(im, 0, 0, 12, 6, 0, -6, 12, 6); bx.restore();
+  } else { bx.rotate(b.rot || 0); bx.drawImage(im, -6, -6); }
   bx.restore();
 }
 function btFrame(now) {
@@ -705,9 +725,9 @@ async function throwBall(kind, label, bonus) {
   await tw(300, p => { BT.foe.scale = 1 - p; BT.foe.dy = -36 * p; }, easeIn);
   BT.foe.show = false; BT.ball.open = false;
   bs.tone(400, 0.05, 'square', 0.04);
-  await tw(300, p => { BT.ball.y = lerp(38, 70, p); }, easeIn); bs.tone(220, 0.05, 'square', 0.05);
-  await tw(170, p => { BT.ball.y = 70 - Math.sin(p * Math.PI) * 8; }); bs.tone(220, 0.04, 'square', 0.04);
-  await tw(120, p => { BT.ball.y = 70 - Math.sin(p * Math.PI) * 3; }); bs.tone(220, 0.03, 'square', 0.03);
+  await tw(300, p => { BT.ball.y = lerp(38, 63, p); }, easeIn); bs.tone(220, 0.05, 'square', 0.05);
+  await tw(170, p => { BT.ball.y = 63 - Math.sin(p * Math.PI) * 8; }); bs.tone(220, 0.04, 'square', 0.04);
+  await tw(120, p => { BT.ball.y = 63 - Math.sin(p * Math.PI) * 3; }); bs.tone(220, 0.03, 'square', 0.03);
   const shakes = catchRoll(bonus);
   for (let i = 0; i < Math.min(3, shakes); i++) {
     await btWait(480); bs.tone(300, 0.04, 'square', 0.05); bs.tone(240, 0.04, 'square', 0.05, 0.08);
@@ -716,7 +736,7 @@ async function throwBall(kind, label, bonus) {
   await btWait(550);
   if (shakes >= 4) {
     bs.tone(1900, 0.05, 'square', 0.05); BT.ball.dark = true;
-    fxRun(700, p => { [-1, 0, 1].forEach(k => { const x = 176 + k * 14 * p, y = 66 - 18 * p + (k ? 4 * p : 0); bx.globalAlpha = 1 - p * 0.7; P(x - 1, y - 3, 2, 6, '#f8e060'); P(x - 3, y - 1, 6, 2, '#f8e060'); P(x, y, 1, 1, '#ffffff'); bx.globalAlpha = 1; }); });
+    fxRun(700, p => { [-1, 0, 1].forEach(k => { const x = 176 + k * 14 * p, y = 59 - 18 * p + (k ? 4 * p : 0); bx.globalAlpha = 1 - p * 0.7; P(x - 1, y - 3, 2, 6, '#f8e060'); P(x - 3, y - 1, 6, 2, '#f8e060'); P(x, y, 1, 1, '#ffffff'); bx.globalAlpha = 1; }); });
     stopMusic(); await btWait(250);
     bs.mel([72, 0, 72, 76, 79, 0, 76, 79, 84, 0, 84], 0.1); bs.mel([48, 0, 52, 0, 55, 0, 52, 0, 60], 0.12, 'triangle', 0.05);
     const wasTeam = DEX.team.length, res = catchMon(BT.id);
